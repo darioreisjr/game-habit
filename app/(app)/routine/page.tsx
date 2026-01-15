@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, subWeeks, addWeeks, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Habit, Checkin, Area } from '@/types/database.types';
@@ -13,10 +13,6 @@ export default function RoutinePage() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
-
-  useEffect(() => {
-    loadData();
-  }, [currentWeek]);
 
   const loadData = async () => {
     const supabase = createClient();
@@ -40,6 +36,10 @@ export default function RoutinePage() {
 
     if (checkinsData) setCheckins(checkinsData);
   };
+
+  useEffect(() => {
+    loadData();
+  }, [currentWeek]);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));

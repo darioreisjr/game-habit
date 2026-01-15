@@ -1,6 +1,6 @@
 'use client';
 
-import { ShopItem } from '@/types/database.types';
+import type { ShopItem } from '@/types/database.types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

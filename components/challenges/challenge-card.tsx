@@ -1,6 +1,6 @@
 'use client';
 
-import { Challenge, UserChallenge } from '@/types/database.types';
+import type { Challenge, UserChallenge } from '@/types/database.types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import type { Habit, Area, HabitDifficulty } from '@/types/database.types';
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -26,10 +25,6 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadAreas();
-  }, []);
-
   const loadAreas = async () => {
     const supabase = createClient();
     const { data } = await supabase
@@ -39,6 +34,10 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
 
     if (data) setAreas(data);
   };
+
+  useEffect(() => {
+    loadAreas();
+  }, []);
 
   const toggleDay = (day: number) => {
     setSelectedDays(prev =>

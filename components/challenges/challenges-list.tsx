@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Challenge, UserChallenge } from '@/types/database.types';
+import type { Challenge, UserChallenge } from '@/types/database.types';
 import { ChallengeCard } from './challenge-card';
 import { createClient } from '@/lib/supabase/client';
 
@@ -12,7 +12,7 @@ export function ChallengesList() {
 
   useEffect(() => {
     loadChallenges();
-  }, []);
+  }, [loadChallenges]);
 
   async function loadChallenges() {
     try {

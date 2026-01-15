@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Search, UserPlus, MessageCircle, Trophy, Crown } from 'lucide-react';
+import { Users, Search, UserPlus, MessageCircle, Trophy, } from 'lucide-react';
 import type { PublicProfile, Friendship } from '@/types/database.types';
 
 export default function FriendsPage() {
@@ -17,7 +17,7 @@ export default function FriendsPage() {
   useEffect(() => {
     loadFriends();
     loadPendingRequests();
-  }, []);
+  }, [loadFriends, loadPendingRequests]);
 
   async function loadFriends() {
     try {
@@ -81,7 +81,7 @@ export default function FriendsPage() {
       alert('Solicitação de amizade enviada!');
       searchUsers(); // Atualizar resultados
     } catch (error: any) {
-      alert('Erro ao enviar solicitação: ' + error.message);
+      alert(`Erro ao enviar solicitação: ${error.message}`);
     }
   }
 
