@@ -17,21 +17,23 @@ const SUGGESTED_AREAS = [
   { name: 'Social', icon: 'Users', color: '#8B5CF6' },
 ];
 
-const SUGGESTED_HABITS = {
+type Difficulty = 'easy' | 'medium' | 'hard';
+
+const SUGGESTED_HABITS: Record<string, { name: string; difficulty: Difficulty }[]> = {
   Saude: [
-    { name: 'Beber 2L de agua', difficulty: 'easy' as const },
-    { name: 'Exercicio 30min', difficulty: 'medium' as const },
-    { name: 'Dormir 8h', difficulty: 'medium' as const },
+    { name: 'Beber 2L de agua', difficulty: 'easy' },
+    { name: 'Exercicio 30min', difficulty: 'medium' },
+    { name: 'Dormir 8h', difficulty: 'medium' },
   ],
   Estudos: [
-    { name: 'Ler 20 paginas', difficulty: 'easy' as const },
-    { name: 'Estudar 1h', difficulty: 'medium' as const },
-    { name: 'Praticar ingles', difficulty: 'easy' as const },
+    { name: 'Ler 20 paginas', difficulty: 'easy' },
+    { name: 'Estudar 1h', difficulty: 'medium' },
+    { name: 'Praticar ingles', difficulty: 'easy' },
   ],
   Casa: [
-    { name: 'Arrumar a cama', difficulty: 'easy' as const },
-    { name: 'Lavar louca', difficulty: 'easy' as const },
-    { name: 'Organizar 15min', difficulty: 'easy' as const },
+    { name: 'Arrumar a cama', difficulty: 'easy' },
+    { name: 'Lavar louca', difficulty: 'easy' },
+    { name: 'Organizar 15min', difficulty: 'easy' },
   ],
 };
 
@@ -111,7 +113,7 @@ export default function OnboardingPage() {
 
   const getAvailableHabits = () => {
     return selectedAreas.flatMap(area => {
-      const areaHabits = SUGGESTED_HABITS[area as keyof typeof SUGGESTED_HABITS];
+      const areaHabits = SUGGESTED_HABITS[area];
       return areaHabits || [];
     });
   };
