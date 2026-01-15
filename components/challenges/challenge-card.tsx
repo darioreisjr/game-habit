@@ -1,15 +1,15 @@
-'use client';
+'use client'
 
-import type { Challenge, UserChallenge } from '@/types/database.types';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import type { Challenge, UserChallenge } from '@/types/database.types'
 
 interface ChallengeCardProps {
-  challenge: Challenge;
-  userChallenge?: UserChallenge;
+  challenge: Challenge
+  userChallenge?: UserChallenge
 }
 
 const bossEmojis: Record<string, string> = {
@@ -18,22 +18,22 @@ const bossEmojis: Record<string, string> = {
   goomba: '🍄',
   boo: '👻',
   hammer_bro: '🔨',
-};
+}
 
 const difficultyColors: Record<string, string> = {
   easy: 'bg-green-100 text-green-700',
   medium: 'bg-yellow-100 text-yellow-700',
   hard: 'bg-red-100 text-red-700',
   legendary: 'bg-purple-100 text-purple-700',
-};
+}
 
 export function ChallengeCard({ challenge, userChallenge }: ChallengeCardProps) {
-  const progress = userChallenge ? (userChallenge.progress / userChallenge.goal) * 100 : 0;
-  const isCompleted = userChallenge?.is_completed || false;
+  const progress = userChallenge ? (userChallenge.progress / userChallenge.goal) * 100 : 0
+  const isCompleted = userChallenge?.is_completed || false
   const timeLeft = formatDistanceToNow(new Date(challenge.end_date), {
     locale: ptBR,
     addSuffix: true,
-  });
+  })
 
   return (
     <Card className="p-6 hover:shadow-lg transition-shadow">
@@ -41,9 +41,7 @@ export function ChallengeCard({ challenge, userChallenge }: ChallengeCardProps) 
         <div className="flex items-center gap-3">
           <div className="text-5xl">{bossEmojis[challenge.boss_type] || '👾'}</div>
           <div>
-            <h3 className="font-display text-xl font-bold text-gray-900">
-              {challenge.name}
-            </h3>
+            <h3 className="font-display text-xl font-bold text-gray-900">{challenge.name}</h3>
             <p className="text-sm text-gray-600 mt-1">{challenge.description}</p>
           </div>
         </div>
@@ -83,5 +81,5 @@ export function ChallengeCard({ challenge, userChallenge }: ChallengeCardProps) 
         )}
       </div>
     </Card>
-  );
+  )
 }

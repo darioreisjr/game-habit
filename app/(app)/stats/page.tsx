@@ -1,38 +1,40 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { BarChart3, TrendingUp, Calendar, Target, Award, Zap, Activity } from 'lucide-react';
+import { Activity, Award, BarChart3, Calendar, Target, TrendingUp, Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function StatsPage() {
-  const supabase = createClient();
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [insights, setInsights] = useState<any[]>([]);
-  const [goals, setGoals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const supabase = createClient()
+  const [dashboard, setDashboard] = useState<any>(null)
+  const [insights, setInsights] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadDashboard();
-    loadInsights();
-    loadGoals();
-  }, [loadDashboard, loadGoals, loadInsights]);
+    loadDashboard()
+    loadInsights()
+    loadGoals()
+  }, [loadDashboard, loadGoals, loadInsights])
 
   async function loadDashboard() {
     try {
-      const { data, error } = await supabase.rpc('get_user_dashboard');
-      if (error) throw error;
-      setDashboard(data);
+      const { data, error } = await supabase.rpc('get_user_dashboard')
+      if (error) throw error
+      setDashboard(data)
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('Error loading dashboard:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function loadInsights() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       const { data, error } = await supabase
         .from('user_insights')
@@ -40,44 +42,46 @@ export default function StatsPage() {
         .eq('user_id', user.id)
         .eq('is_dismissed', false)
         .order('priority', { ascending: false })
-        .limit(5);
+        .limit(5)
 
-      if (error) throw error;
-      setInsights(data || []);
+      if (error) throw error
+      setInsights(data || [])
     } catch (error) {
-      console.error('Error loading insights:', error);
+      console.error('Error loading insights:', error)
     }
   }
 
   async function loadGoals() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       const { data, error } = await supabase
         .from('personal_goals')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_completed', false)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
 
-      if (error) throw error;
-      setGoals(data || []);
+      if (error) throw error
+      setGoals(data || [])
     } catch (error) {
-      console.error('Error loading goals:', error);
+      console.error('Error loading goals:', error)
     }
   }
 
   function getInsightIcon(type: string) {
     switch (type) {
       case 'achievement_near':
-        return <Award className="w-6 h-6 text-yellow-600" />;
+        return <Award className="w-6 h-6 text-yellow-600" />
       case 'streak_warning':
-        return <Zap className="w-6 h-6 text-red-600" />;
+        return <Zap className="w-6 h-6 text-red-600" />
       case 'consistency_praise':
-        return <Target className="w-6 h-6 text-green-600" />;
+        return <Target className="w-6 h-6 text-green-600" />
       default:
-        return <TrendingUp className="w-6 h-6 text-blue-600" />;
+        return <TrendingUp className="w-6 h-6 text-blue-600" />
     }
   }
 
@@ -89,7 +93,7 @@ export default function StatsPage() {
           <p className="text-gray-600">Carregando estatísticas...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -123,7 +127,9 @@ export default function StatsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Moedas</span>
-                  <span className="font-bold text-yellow-600">{dashboard.today.total_coins_earned}</span>
+                  <span className="font-bold text-yellow-600">
+                    {dashboard.today.total_coins_earned}
+                  </span>
                 </div>
               </div>
             ) : (
@@ -169,11 +175,15 @@ export default function StatsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Conquistas</span>
-                  <span className="font-bold text-yellow-600">{dashboard.month.achievements_unlocked || 0}</span>
+                  <span className="font-bold text-yellow-600">
+                    {dashboard.month.achievements_unlocked || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Média Diária</span>
-                  <span className="font-bold text-purple-600">{dashboard.month.avg_daily_completion?.toFixed(1) || 0}%</span>
+                  <span className="font-bold text-purple-600">
+                    {dashboard.month.avg_daily_completion?.toFixed(1) || 0}%
+                  </span>
                 </div>
               </div>
             ) : (
@@ -229,10 +239,7 @@ export default function StatsPage() {
                     <div
                       className="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all"
                       style={{
-                        width: `${Math.min(
-                          100,
-                          (goal.current_value / goal.target_value) * 100
-                        )}%`
+                        width: `${Math.min(100, (goal.current_value / goal.target_value) * 100)}%`,
                       }}
                     />
                   </div>
@@ -240,9 +247,7 @@ export default function StatsPage() {
                     <p className="text-sm text-gray-600 mt-2">{goal.description}</p>
                   )}
                   <div className="flex items-center gap-4 mt-3 text-sm">
-                    <span className="text-blue-600 font-semibold">
-                      🎯 +{goal.reward_xp} XP
-                    </span>
+                    <span className="text-blue-600 font-semibold">🎯 +{goal.reward_xp} XP</span>
                     <span className="text-yellow-600 font-semibold">
                       💰 +{goal.reward_coins} moedas
                     </span>
@@ -261,10 +266,12 @@ export default function StatsPage() {
         {!dashboard && !insights.length && !goals.length && (
           <div className="text-center py-12">
             <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Comece a completar hábitos para ver suas estatísticas!</p>
+            <p className="text-gray-500 text-lg">
+              Comece a completar hábitos para ver suas estatísticas!
+            </p>
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }

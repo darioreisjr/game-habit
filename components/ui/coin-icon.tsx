@@ -1,8 +1,8 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
 
 interface CoinIconProps {
-  className?: string;
-  size?: number;
+  className?: string
+  size?: number
 }
 
 export function CoinIcon({ className, size = 20 }: CoinIconProps) {
@@ -18,5 +18,5 @@ export function CoinIcon({ className, size = 20 }: CoinIconProps) {
         C
       </span>
     </div>
-  );
+  )
 }

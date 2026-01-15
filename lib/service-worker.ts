@@ -2,147 +2,141 @@
 
 export async function registerServiceWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return;
+    return
   }
 
   try {
     const registration = await navigator.serviceWorker.register('/service-worker.js', {
       scope: '/',
-    });
+    })
 
-    console.log('Service Worker registered:', registration);
+    console.log('Service Worker registered:', registration)
 
     // Check for updates periodically
     setInterval(() => {
-      registration.update();
-    }, 60000); // Check every minute
+      registration.update()
+    }, 60000) // Check every minute
 
-    return registration;
+    return registration
   } catch (error) {
-    console.error('Service Worker registration failed:', error);
+    console.error('Service Worker registration failed:', error)
   }
 }
 
 export async function unregisterServiceWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    return;
+    return
   }
 
-  const registration = await navigator.serviceWorker.ready;
-  await registration.unregister();
+  const registration = await navigator.serviceWorker.ready
+  await registration.unregister()
 }
 
 // Queue a checkin for background sync
 export async function queueCheckinForSync(checkinData: any) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return
 
   try {
     // Open IndexedDB
-    const db = await openDB();
+    const db = await openDB()
 
     // Add to pending queue
-    await addPendingCheckin(db, checkinData);
+    await addPendingCheckin(db, checkinData)
 
     // Request background sync if available
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
-      const registration = await navigator.serviceWorker.ready;
-      await (registration as any).sync.register('sync-checkins');
+      const registration = await navigator.serviceWorker.ready
+      await (registration as any).sync.register('sync-checkins')
     }
   } catch (error) {
-    console.error('Failed to queue checkin:', error);
+    console.error('Failed to queue checkin:', error)
   }
 }
 
 // Check if user is online
 export function isOnline(): boolean {
-  if (typeof window === 'undefined') return true;
-  return navigator.onLine;
+  if (typeof window === 'undefined') return true
+  return navigator.onLine
 }
 
 // Listen to online/offline events
-export function setupOnlineListeners(
-  onOnline?: () => void,
-  onOffline?: () => void
-) {
-  if (typeof window === 'undefined') return;
+export function setupOnlineListeners(onOnline?: () => void, onOffline?: () => void) {
+  if (typeof window === 'undefined') return
 
   window.addEventListener('online', () => {
-    console.log('Back online!');
-    onOnline?.();
-  });
+    console.log('Back online!')
+    onOnline?.()
+  })
 
   window.addEventListener('offline', () => {
-    console.log('Gone offline!');
-    onOffline?.();
-  });
+    console.log('Gone offline!')
+    onOffline?.()
+  })
 }
 
 // IndexedDB helpers
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('GameHabitDB', 1);
+    const request = indexedDB.open('GameHabitDB', 1)
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
 
     request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
+      const db = (event.target as IDBOpenDBRequest).result
       if (!db.objectStoreNames.contains('pendingCheckins')) {
         db.createObjectStore('pendingCheckins', {
           keyPath: 'id',
           autoIncrement: true,
-        });
+        })
       }
-    };
-  });
+    }
+  })
 }
 
 function addPendingCheckin(db: IDBDatabase, data: any): Promise<void> {
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['pendingCheckins'], 'readwrite');
-    const store = transaction.objectStore('pendingCheckins');
+    const transaction = db.transaction(['pendingCheckins'], 'readwrite')
+    const store = transaction.objectStore('pendingCheckins')
     const request = store.add({
       data,
       timestamp: Date.now(),
-    });
+    })
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve()
+  })
 }
 
 // Request notification permission
 export async function requestNotificationPermission(): Promise<boolean> {
   if (typeof window === 'undefined' || !('Notification' in window)) {
-    return false;
+    return false
   }
 
   if (Notification.permission === 'granted') {
-    return true;
+    return true
   }
 
   if (Notification.permission === 'denied') {
-    return false;
+    return false
   }
 
-  const permission = await Notification.requestPermission();
-  return permission === 'granted';
+  const permission = await Notification.requestPermission()
+  return permission === 'granted'
 }
 
 // Show a notification
-export async function showNotification(
-  title: string,
-  options?: NotificationOptions
-) {
-  if (typeof window === 'undefined') return;
+export async function showNotification(title: string, options?: NotificationOptions) {
+  if (typeof window === 'undefined') return
 
-  const hasPermission = await requestNotificationPermission();
-  if (!hasPermission) return;
+  const hasPermission = await requestNotificationPermission()
+  if (!hasPermission) return
 
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.ready
   await registration.showNotification(title, {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     ...options,
-  });
+  })
 }

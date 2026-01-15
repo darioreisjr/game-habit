@@ -1,86 +1,80 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { HabitForm } from '@/components/habits/habit-form';
-import { Plus, Edit2, Archive, Trash2, Filter } from 'lucide-react';
-import type { Habit, Area } from '@/types/database.types';
+import { Archive, Edit2, Filter, Plus, Trash2 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { HabitForm } from '@/components/habits/habit-form'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
+import type { Area, Habit } from '@/types/database.types'
 
 export default function HabitsPage() {
-  const searchParams = useSearchParams();
-  const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([]);
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [showArchived, setShowArchived] = useState(false);
-  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const searchParams = useSearchParams()
+  const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
+  const [selectedArea, setSelectedArea] = useState<string>('all')
+  const [showArchived, setShowArchived] = useState(false)
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
+  const [showForm, setShowForm] = useState(false)
 
   const loadData = async () => {
-    const supabase = createClient();
+    const supabase = createClient()
 
-    const { data: areasData } = await supabase
-      .from('areas')
-      .select('*')
-      .order('order_index');
+    const { data: areasData } = await supabase.from('areas').select('*').order('order_index')
 
-    if (areasData) setAreas(areasData);
+    if (areasData) setAreas(areasData)
 
     let query = supabase
       .from('habits')
       .select('*, area:areas(*)')
       .eq('is_archived', showArchived)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
 
     if (selectedArea !== 'all') {
-      query = query.eq('area_id', selectedArea);
+      query = query.eq('area_id', selectedArea)
     }
 
-    const { data: habitsData } = await query;
+    const { data: habitsData } = await query
 
-    if (habitsData) setHabits(habitsData as any);
-  };
+    if (habitsData) setHabits(habitsData as any)
+  }
 
   useEffect(() => {
-    loadData();
-  }, [selectedArea, showArchived]);
+    loadData()
+  }, [selectedArea, showArchived])
 
   useEffect(() => {
     if (searchParams.get('new') === '1') {
-      setEditingHabit(null);
-      setShowForm(true);
+      setEditingHabit(null)
+      setShowForm(true)
     }
-  }, [searchParams]);
+  }, [searchParams])
 
   const handleArchive = async (habitId: string) => {
-    const supabase = createClient();
-    await supabase
-      .from('habits')
-      .update({ is_archived: true })
-      .eq('id', habitId);
+    const supabase = createClient()
+    await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
 
-    loadData();
-  };
+    loadData()
+  }
 
   const handleDelete = async (habitId: string) => {
     if (!confirm('Tem certeza que deseja excluir este hábito? Esta ação não pode ser desfeita.')) {
-      return;
+      return
     }
 
-    const supabase = createClient();
-    await supabase.from('habits').delete().eq('id', habitId);
+    const supabase = createClient()
+    await supabase.from('habits').delete().eq('id', habitId)
 
-    loadData();
-  };
+    loadData()
+  }
 
   const handleFormSuccess = () => {
-    setShowForm(false);
-    setEditingHabit(null);
-    loadData();
-  };
+    setShowForm(false)
+    setEditingHabit(null)
+    loadData()
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
@@ -144,8 +138,8 @@ export default function HabitsPage() {
             habit={editingHabit || undefined}
             onSuccess={handleFormSuccess}
             onCancel={() => {
-              setShowForm(false);
-              setEditingHabit(null);
+              setShowForm(false)
+              setEditingHabit(null)
             }}
           />
         </Card>
@@ -159,8 +153,8 @@ export default function HabitsPage() {
               {showArchived
                 ? 'Nenhum hábito arquivado.'
                 : selectedArea === 'all'
-                ? 'Você ainda não tem hábitos. Crie seu primeiro!'
-                : 'Nenhum hábito nesta área.'}
+                  ? 'Você ainda não tem hábitos. Crie seu primeiro!'
+                  : 'Nenhum hábito nesta área.'}
             </p>
           </Card>
         ) : (
@@ -180,8 +174,8 @@ export default function HabitsPage() {
                         habit.difficulty === 'easy'
                           ? 'success'
                           : habit.difficulty === 'medium'
-                          ? 'blue'
-                          : 'warning'
+                            ? 'blue'
+                            : 'warning'
                       }
                     >
                       {habit.difficulty === 'easy' && 'Fácil'}
@@ -201,18 +195,14 @@ export default function HabitsPage() {
                     size="icon"
                     variant="ghost"
                     onClick={() => {
-                      setEditingHabit(habit);
-                      setShowForm(true);
+                      setEditingHabit(habit)
+                      setShowForm(true)
                     }}
                   >
                     <Edit2 size={18} />
                   </Button>
                   {!showArchived && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleArchive(habit.id)}
-                    >
+                    <Button size="icon" variant="ghost" onClick={() => handleArchive(habit.id)}>
                       <Archive size={18} />
                     </Button>
                   )}
@@ -231,5 +221,5 @@ export default function HabitsPage() {
         )}
       </div>
     </div>
-  );
+  )
 }

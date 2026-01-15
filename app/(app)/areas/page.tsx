@@ -1,83 +1,80 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { AreaForm } from '@/components/areas/area-form';
-import { Plus, Edit2, Trash2, } from 'lucide-react';
-import type { Area, } from '@/types/database.types';
+import { Edit2, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AreaForm } from '@/components/areas/area-form'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
+import type { Area } from '@/types/database.types'
 
 export default function AreasPage() {
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [habitCounts, setHabitCounts] = useState<Record<string, number>>({});
-  const [editingArea, setEditingArea] = useState<Area | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [areas, setAreas] = useState<Area[]>([])
+  const [habitCounts, setHabitCounts] = useState<Record<string, number>>({})
+  const [editingArea, setEditingArea] = useState<Area | null>(null)
+  const [showForm, setShowForm] = useState(false)
 
   const loadData = async () => {
-    const supabase = createClient();
+    const supabase = createClient()
 
     // Carregar áreas
-    const { data: areasData } = await supabase
-      .from('areas')
-      .select('*')
-      .order('order_index');
+    const { data: areasData } = await supabase.from('areas').select('*').order('order_index')
 
     if (areasData) {
-      setAreas(areasData);
+      setAreas(areasData)
 
       // Contar hábitos por área
-      const counts: Record<string, number> = {};
+      const counts: Record<string, number> = {}
       for (const area of areasData) {
         const { count } = await supabase
           .from('habits')
           .select('*', { count: 'exact', head: true })
           .eq('area_id', area.id)
-          .eq('is_archived', false);
+          .eq('is_archived', false)
 
-        counts[area.id] = count || 0;
+        counts[area.id] = count || 0
       }
-      setHabitCounts(counts);
+      setHabitCounts(counts)
     }
-  };
+  }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   const handleDelete = async (areaId: string) => {
-    const habitCount = habitCounts[areaId] || 0;
+    const habitCount = habitCounts[areaId] || 0
 
     if (habitCount > 0) {
-      alert(`Esta área possui ${habitCount} hábito(s) vinculado(s). Por favor, remova ou mova os hábitos antes de excluir a área.`);
-      return;
+      alert(
+        `Esta área possui ${habitCount} hábito(s) vinculado(s). Por favor, remova ou mova os hábitos antes de excluir a área.`
+      )
+      return
     }
 
     if (!confirm('Tem certeza que deseja excluir esta área? Esta ação não pode ser desfeita.')) {
-      return;
+      return
     }
 
-    const supabase = createClient();
-    await supabase.from('areas').delete().eq('id', areaId);
+    const supabase = createClient()
+    await supabase.from('areas').delete().eq('id', areaId)
 
-    loadData();
-  };
+    loadData()
+  }
 
   const handleFormSuccess = () => {
-    setShowForm(false);
-    setEditingArea(null);
-    loadData();
-  };
+    setShowForm(false)
+    setEditingArea(null)
+    loadData()
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl md:text-4xl font-display font-bold">Áreas</h1>
-          <p className="text-text-secondary mt-2">
-            Organize seus hábitos em áreas da sua vida
-          </p>
+          <p className="text-text-secondary mt-2">Organize seus hábitos em áreas da sua vida</p>
         </div>
         <Button onClick={() => setShowForm(true)} className="gap-2">
           <Plus size={20} />
@@ -95,8 +92,8 @@ export default function AreasPage() {
             area={editingArea || undefined}
             onSuccess={handleFormSuccess}
             onCancel={() => {
-              setShowForm(false);
-              setEditingArea(null);
+              setShowForm(false)
+              setEditingArea(null)
             }}
           />
         </Card>
@@ -148,8 +145,8 @@ export default function AreasPage() {
                     size="icon"
                     variant="ghost"
                     onClick={() => {
-                      setEditingArea(area);
-                      setShowForm(true);
+                      setEditingArea(area)
+                      setShowForm(true)
                     }}
                   >
                     <Edit2 size={18} />
@@ -173,11 +170,12 @@ export default function AreasPage() {
       {areas.length > 0 && (
         <Card className="p-4 bg-background-light">
           <p className="text-sm text-text-secondary">
-            💡 <strong>Dica:</strong> As áreas ajudam você a organizar seus hábitos por temas como Saúde, Estudos, Trabalho, etc.
-            Você não pode excluir uma área que possui hábitos vinculados.
+            💡 <strong>Dica:</strong> As áreas ajudam você a organizar seus hábitos por temas como
+            Saúde, Estudos, Trabalho, etc. Você não pode excluir uma área que possui hábitos
+            vinculados.
           </p>
         </Card>
       )}
     </div>
-  );
+  )
 }

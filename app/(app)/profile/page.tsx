@@ -1,105 +1,105 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { StatsDisplay } from '@/components/ui/stats-display';
-import { LogOut, User, Trophy, Target } from 'lucide-react';
-import type { Stats, Profile } from '@/types/database.types';
+import { LogOut, Target, Trophy, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { StatsDisplay } from '@/components/ui/stats-display'
+import { createClient } from '@/lib/supabase/client'
+import type { Profile, Stats } from '@/types/database.types'
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [totalCheckins, setTotalCheckins] = useState(0);
-  const [totalHabits, setTotalHabits] = useState(0);
+  const router = useRouter()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [totalCheckins, setTotalCheckins] = useState(0)
+  const [totalHabits, setTotalHabits] = useState(0)
 
   const loadData = async () => {
-    const supabase = createClient();
+    const supabase = createClient()
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser()
 
-    if (!user) return;
+    if (!user) return
 
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .single()
 
     if (profileData) {
-      setProfile(profileData);
-      setName(profileData.name);
+      setProfile(profileData)
+      setName(profileData.name)
     }
 
     const { data: statsData } = await supabase
       .from('stats')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .single()
 
-    if (statsData) setStats(statsData);
+    if (statsData) setStats(statsData)
 
     const { count: checkinsCount } = await supabase
       .from('checkins')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
 
-    setTotalCheckins(checkinsCount || 0);
+    setTotalCheckins(checkinsCount || 0)
 
     const { count: habitsCount } = await supabase
       .from('habits')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('is_archived', false);
+      .eq('is_archived', false)
 
-    setTotalHabits(habitsCount || 0);
-  };
+    setTotalHabits(habitsCount || 0)
+  }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
-    const supabase = createClient();
+    const supabase = createClient()
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser()
 
     if (user) {
-      await supabase.from('profiles').update({ name }).eq('id', user.id);
+      await supabase.from('profiles').update({ name }).eq('id', user.id)
 
-      alert('Perfil atualizado com sucesso!');
-      loadData();
+      alert('Perfil atualizado com sucesso!')
+      loadData()
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
-  };
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   if (!profile || !stats) {
     return (
       <div className="max-w-4xl mx-auto p-4 md:p-6 md:ml-64">
         <p>Carregando...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -112,12 +112,7 @@ export default function ProfilePage() {
       {/* Stats Overview */}
       <Card>
         <CardContent className="p-6">
-          <StatsDisplay
-            level={stats.level}
-            xp={stats.xp}
-            coins={stats.coins}
-            variant="full"
-          />
+          <StatsDisplay level={stats.level} xp={stats.xp} coins={stats.coins} variant="full" />
         </CardContent>
       </Card>
 
@@ -200,7 +195,11 @@ export default function ProfilePage() {
                 Desconectar e voltar para a tela de login
               </p>
             </div>
-            <Button variant="outline" onClick={handleLogout} className="gap-2 text-mario-red border-mario-red hover:bg-mario-red/10">
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="gap-2 text-mario-red border-mario-red hover:bg-mario-red/10"
+            >
               <LogOut size={18} />
               Sair
             </Button>
@@ -208,5 +207,5 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
