@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Achievement, UserAchievement } from '@/types/database.types';
+import type { Achievement, UserAchievement } from '@/types/database.types';
 import { AchievementCard } from './achievement-card';
 import { createClient } from '@/lib/supabase/client';
 
@@ -16,7 +16,7 @@ export function AchievementsList() {
 
   useEffect(() => {
     loadAchievements();
-  }, []);
+  }, [loadAchievements]);
 
   async function loadAchievements() {
     try {

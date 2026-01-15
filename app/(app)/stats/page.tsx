@@ -15,7 +15,7 @@ export default function StatsPage() {
     loadDashboard();
     loadInsights();
     loadGoals();
-  }, []);
+  }, [loadDashboard, loadGoals, loadInsights]);
 
   async function loadDashboard() {
     try {

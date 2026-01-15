@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Trophy, Medal, Crown, TrendingUp, Users, Zap } from 'lucide-react';
+import { Trophy, Medal, Crown, TrendingUp, Zap } from 'lucide-react';
 
 type LeaderboardPeriod = 'weekly' | 'monthly' | 'all_time' | 'friends';
 
@@ -15,7 +15,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     loadLeaderboard();
-  }, [period]);
+  }, [loadLeaderboard]);
 
   async function loadLeaderboard() {
     setLoading(true);
@@ -70,10 +70,11 @@ export default function LeaderboardPage() {
   function getPeriodStart(period: LeaderboardPeriod): string {
     const now = new Date();
     switch (period) {
-      case 'weekly':
+      case 'weekly': {
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
         return weekStart.toISOString().split('T')[0];
+      }
       case 'monthly':
         return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
       default:
@@ -154,7 +155,7 @@ export default function LeaderboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {entries.map((entry: any, index) => (
+              {entries.map((entry: any, _index) => (
                 <div
                   key={entry.id}
                   className={`p-4 flex items-center justify-between transition-colors ${

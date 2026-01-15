@@ -47,7 +47,7 @@ export default function SignupPage() {
       });
 
       if (signUpError) {
-        setError('Erro ao criar conta: ' + signUpError.message);
+        setError(`Erro ao criar conta: ${signUpError.message}`);
         setLoading(false);
         return;
       }
@@ -120,7 +120,7 @@ export default function SignupPage() {
       // Sucesso total! Redirecionar para onboarding
       router.push('/onboarding');
       router.refresh();
-    } catch (err) {
+    } catch (_err) {
       setError('Erro ao criar conta. Verifique sua conexão e tente novamente.');
       setLoading(false);
     }
