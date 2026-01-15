@@ -1,47 +1,52 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link'
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
 
   const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess(false);
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess(false)
 
-    const supabase = createClient();
+    const supabase = createClient()
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
-    });
+    })
 
     if (error) {
-      setError(error.message);
+      setError(error.message)
     } else {
-      setSuccess(true);
+      setSuccess(true)
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-mario-red/10 to-mario-blue/10">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-display">Recuperar senha</CardTitle>
-          <CardDescription>
-            Enviaremos um link para redefinir sua senha
-          </CardDescription>
+          <CardDescription>Enviaremos um link para redefinir sua senha</CardDescription>
         </CardHeader>
         <form onSubmit={handleResetPassword}>
           <CardContent className="space-y-4">
@@ -73,15 +78,12 @@ export default function ForgotPasswordPage() {
             <Button type="submit" className="w-full" disabled={loading || success}>
               {loading ? 'Enviando...' : 'Enviar link de recuperação'}
             </Button>
-            <Link
-              href="/login"
-              className="text-sm text-mario-blue hover:underline text-center"
-            >
+            <Link href="/login" className="text-sm text-mario-blue hover:underline text-center">
               Voltar para login
             </Link>
           </CardFooter>
         </form>
       </Card>
     </div>
-  );
+  )
 }

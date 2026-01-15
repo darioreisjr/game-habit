@@ -1,87 +1,91 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Users, Search, UserPlus, MessageCircle, Trophy, } from 'lucide-react';
-import type { PublicProfile, Friendship } from '@/types/database.types';
+import { MessageCircle, Search, Trophy, UserPlus, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import type { Friendship, PublicProfile } from '@/types/database.types'
 
 export default function FriendsPage() {
-  const supabase = createClient();
-  const [friends, setFriends] = useState<any[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<Friendship[]>([]);
-  const [searchResults, setSearchResults] = useState<PublicProfile[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends');
+  const supabase = createClient()
+  const [friends, setFriends] = useState<any[]>([])
+  const [pendingRequests, setPendingRequests] = useState<Friendship[]>([])
+  const [searchResults, setSearchResults] = useState<PublicProfile[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends')
 
   useEffect(() => {
-    loadFriends();
-    loadPendingRequests();
-  }, [loadFriends, loadPendingRequests]);
+    loadFriends()
+    loadPendingRequests()
+  }, [loadFriends, loadPendingRequests])
 
   async function loadFriends() {
     try {
-      const { data, error } = await supabase.rpc('get_friends');
-      if (error) throw error;
-      setFriends(data || []);
+      const { data, error } = await supabase.rpc('get_friends')
+      if (error) throw error
+      setFriends(data || [])
     } catch (error) {
-      console.error('Error loading friends:', error);
+      console.error('Error loading friends:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function loadPendingRequests() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       const { data, error } = await supabase
         .from('friendships')
         .select('*')
         .eq('addressee_id', user.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
 
-      if (error) throw error;
-      setPendingRequests(data || []);
+      if (error) throw error
+      setPendingRequests(data || [])
     } catch (error) {
-      console.error('Error loading requests:', error);
+      console.error('Error loading requests:', error)
     }
   }
 
   async function searchUsers() {
     if (!searchTerm.trim()) {
-      setSearchResults([]);
-      return;
+      setSearchResults([])
+      return
     }
 
     try {
       const { data, error } = await supabase.rpc('search_users', {
-        search_term: searchTerm
-      });
-      if (error) throw error;
-      setSearchResults(data || []);
+        search_term: searchTerm,
+      })
+      if (error) throw error
+      setSearchResults(data || [])
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error('Error searching users:', error)
     }
   }
 
   async function sendFriendRequest(userId: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       const { error } = await supabase.from('friendships').insert({
         requester_id: user.id,
         addressee_id: userId,
-        status: 'pending'
-      });
+        status: 'pending',
+      })
 
-      if (error) throw error;
-      alert('Solicitação de amizade enviada!');
-      searchUsers(); // Atualizar resultados
+      if (error) throw error
+      alert('Solicitação de amizade enviada!')
+      searchUsers() // Atualizar resultados
     } catch (error: any) {
-      alert(`Erro ao enviar solicitação: ${error.message}`);
+      alert(`Erro ao enviar solicitação: ${error.message}`)
     }
   }
 
@@ -90,13 +94,13 @@ export default function FriendsPage() {
       const { error } = await supabase
         .from('friendships')
         .update({ status: accept ? 'accepted' : 'rejected' })
-        .eq('id', requestId);
+        .eq('id', requestId)
 
-      if (error) throw error;
-      loadPendingRequests();
-      if (accept) loadFriends();
+      if (error) throw error
+      loadPendingRequests()
+      if (accept) loadFriends()
     } catch (error) {
-      console.error('Error responding to request:', error);
+      console.error('Error responding to request:', error)
     }
   }
 
@@ -180,7 +184,9 @@ export default function FriendsPage() {
                         {friend.friend_display_name?.[0] || '?'}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{friend.friend_display_name}</h3>
+                        <h3 className="font-semibold text-gray-900">
+                          {friend.friend_display_name}
+                        </h3>
                         <p className="text-sm text-gray-600">@{friend.friend_username}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <Trophy className="w-4 h-4 text-yellow-600" />
@@ -280,9 +286,7 @@ export default function FriendsPage() {
                       <div>
                         <h3 className="font-semibold text-gray-900">{user.display_name}</h3>
                         <p className="text-sm text-gray-600">@{user.username}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Código: {user.friend_code}
-                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Código: {user.friend_code}</p>
                       </div>
                     </div>
                     <button
@@ -301,5 +305,5 @@ export default function FriendsPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

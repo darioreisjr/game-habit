@@ -1,9 +1,23 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Map, CheckSquare, Calendar, User, FolderKanban, Trophy, ShoppingBag, Swords, Settings, Users, Crown, Sparkles, BarChart3 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  BarChart3,
+  Calendar,
+  CheckSquare,
+  Crown,
+  FolderKanban,
+  Map,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  Swords,
+  Trophy,
+  User,
+  Users,
+} from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/', icon: Map, label: 'Mapa' },
@@ -19,10 +33,10 @@ const NAV_ITEMS = [
   { href: '/stats', icon: BarChart3, label: 'Estatísticas', badge: 'V3' },
   { href: '/profile', icon: User, label: 'Perfil' },
   { href: '/settings', icon: Settings, label: 'Configurações' },
-];
+]
 
 export function Navigation() {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   return (
     <>
@@ -30,7 +44,7 @@ export function Navigation() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 overflow-x-auto">
         <div className="flex items-center h-16 px-2">
           {NAV_ITEMS.map(({ href, icon: Icon, label, badge }) => {
-            const isActive = pathname === href;
+            const isActive = pathname === href
             return (
               <Link
                 key={href}
@@ -48,7 +62,7 @@ export function Navigation() {
                   </span>
                 )}
               </Link>
-            );
+            )
           })}
         </div>
       </nav>
@@ -61,7 +75,7 @@ export function Navigation() {
         </div>
         <nav className="space-y-2">
           {NAV_ITEMS.map(({ href, icon: Icon, label, badge }) => {
-            const isActive = pathname === href;
+            const isActive = pathname === href
             return (
               <Link
                 key={href}
@@ -81,10 +95,10 @@ export function Navigation() {
                   </span>
                 )}
               </Link>
-            );
+            )
           })}
         </nav>
       </aside>
     </>
-  );
+  )
 }

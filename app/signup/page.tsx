@@ -1,37 +1,44 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
-  const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const router = useRouter()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setNotice('');
-    setAwaitingConfirmation(false);
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setNotice('')
+    setAwaitingConfirmation(false)
 
     if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
-      setLoading(false);
-      return;
+      setError('A senha deve ter pelo menos 6 caracteres')
+      setLoading(false)
+      return
     }
 
-    const supabase = createClient();
+    const supabase = createClient()
 
     try {
       // Passo 1: Criar usuário (sem trigger no banco)
@@ -44,32 +51,32 @@ export default function SignupPage() {
           },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
         },
-      });
+      })
 
       if (signUpError) {
-        setError(`Erro ao criar conta: ${signUpError.message}`);
-        setLoading(false);
-        return;
+        setError(`Erro ao criar conta: ${signUpError.message}`)
+        setLoading(false)
+        return
       }
 
       if (!authData.user) {
-        setError('Erro ao criar usuário. Tente novamente.');
-        setLoading(false);
-        return;
+        setError('Erro ao criar usuário. Tente novamente.')
+        setLoading(false)
+        return
       }
 
       // Aguardar um pouco para garantir que o usuário está autenticado
       if (!authData.session) {
-        setNotice('Conta criada. Confirme o email para continuar.');
-        setAwaitingConfirmation(true);
-        setLoading(false);
-        return;
+        setNotice('Conta criada. Confirme o email para continuar.')
+        setAwaitingConfirmation(true)
+        setLoading(false)
+        return
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       // Passo 2: Criar profile manualmente (OBRIGATÓRIO)
-      const userId = authData.user.id;
+      const userId = authData.user.id
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -77,17 +84,17 @@ export default function SignupPage() {
           name: name || 'Usuário',
         })
         .select()
-        .single();
+        .single()
 
       if (profileError) {
         // Verificar se já existe
         if (profileError.code === '23505' || profileError.message.includes('duplicate')) {
         } else {
           // Tentar fazer logout do usuário criado
-          await supabase.auth.signOut();
-          setError('Erro ao criar perfil. Por favor, tente novamente.');
-          setLoading(false);
-          return;
+          await supabase.auth.signOut()
+          setError('Erro ao criar perfil. Por favor, tente novamente.')
+          setLoading(false)
+          return
         }
       } else {
       }
@@ -102,29 +109,29 @@ export default function SignupPage() {
           coins: 0,
         })
         .select()
-        .single();
+        .single()
 
       if (statsError) {
         // Verificar se já existe
         if (statsError.code === '23505' || statsError.message.includes('duplicate')) {
         } else {
           // Tentar fazer logout do usuário criado
-          await supabase.auth.signOut();
-          setError('Erro ao criar estatísticas. Por favor, tente novamente.');
-          setLoading(false);
-          return;
+          await supabase.auth.signOut()
+          setError('Erro ao criar estatísticas. Por favor, tente novamente.')
+          setLoading(false)
+          return
         }
       } else {
       }
 
       // Sucesso total! Redirecionar para onboarding
-      router.push('/onboarding');
-      router.refresh();
+      router.push('/onboarding')
+      router.refresh()
     } catch (_err) {
-      setError('Erro ao criar conta. Verifique sua conexão e tente novamente.');
-      setLoading(false);
+      setError('Erro ao criar conta. Verifique sua conexão e tente novamente.')
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-mario-red/10 to-mario-blue/10">
@@ -220,5 +227,5 @@ export default function SignupPage() {
         </form>
       </Card>
     </div>
-  );
+  )
 }

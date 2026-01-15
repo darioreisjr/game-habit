@@ -1,18 +1,27 @@
-import type { HTMLAttributes } from 'react';
-import { cn } from '@/lib/utils';
+import type { HTMLAttributes } from 'react'
+import { cn } from '@/lib/utils'
 
 interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
-  value: number;
-  max?: number;
-  color?: string;
+  value: number
+  max?: number
+  color?: string
 }
 
-function Progress({ value, max = 100, color = 'bg-mario-red', className, ...props }: ProgressProps) {
-  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+function Progress({
+  value,
+  max = 100,
+  color = 'bg-mario-red',
+  className,
+  ...props
+}: ProgressProps) {
+  const percentage = Math.min(Math.max((value / max) * 100, 0), 100)
 
   return (
     <div
-      className={cn('relative h-3 w-full overflow-hidden rounded-full bg-background-light border border-border', className)}
+      className={cn(
+        'relative h-3 w-full overflow-hidden rounded-full bg-background-light border border-border',
+        className
+      )}
       {...props}
     >
       <div
@@ -20,7 +29,7 @@ function Progress({ value, max = 100, color = 'bg-mario-red', className, ...prop
         style={{ width: `${percentage}%` }}
       />
     </div>
-  );
+  )
 }
 
-export { Progress };
+export { Progress }

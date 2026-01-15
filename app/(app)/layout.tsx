@@ -1,20 +1,16 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { Navigation } from '@/components/navigation';
+import { redirect } from 'next/navigation'
+import { Navigation } from '@/components/navigation'
+import { createClient } from '@/lib/supabase/server'
 
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const supabase = await createClient();
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login');
+    redirect('/login')
   }
 
   return (
@@ -22,5 +18,5 @@ export default async function AppLayout({
       <main className="pb-20 md:pb-0">{children}</main>
       <Navigation />
     </div>
-  );
+  )
 }

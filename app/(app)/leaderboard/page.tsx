@@ -1,27 +1,27 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Trophy, Medal, Crown, TrendingUp, Zap } from 'lucide-react';
+import { Crown, Medal, TrendingUp, Trophy, Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
-type LeaderboardPeriod = 'weekly' | 'monthly' | 'all_time' | 'friends';
+type LeaderboardPeriod = 'weekly' | 'monthly' | 'all_time' | 'friends'
 
 export default function LeaderboardPage() {
-  const supabase = createClient();
-  const [entries, setEntries] = useState<any[]>([]);
-  const [period, setPeriod] = useState<LeaderboardPeriod>('weekly');
-  const [loading, setLoading] = useState(true);
-  const [userRank, setUserRank] = useState<any>(null);
+  const supabase = createClient()
+  const [entries, setEntries] = useState<any[]>([])
+  const [period, setPeriod] = useState<LeaderboardPeriod>('weekly')
+  const [loading, setLoading] = useState(true)
+  const [userRank, setUserRank] = useState<any>(null)
 
   useEffect(() => {
-    loadLeaderboard();
-  }, [loadLeaderboard]);
+    loadLeaderboard()
+  }, [loadLeaderboard])
 
   async function loadLeaderboard() {
-    setLoading(true);
+    setLoading(true)
     try {
-      const periodStart = getPeriodStart(period);
-      const periodEnd = new Date().toISOString().split('T')[0];
+      const periodStart = getPeriodStart(period)
+      const periodEnd = new Date().toISOString().split('T')[0]
 
       // Buscar leaderboard do período
       const { data: leaderboardData, error: lbError } = await supabase
@@ -30,11 +30,11 @@ export default function LeaderboardPage() {
         .eq('leaderboard_type', period === 'all_time' ? 'global_xp' : `${period}_xp`)
         .eq('period_start', periodStart)
         .eq('period_end', periodEnd)
-        .single();
+        .single()
 
       if (lbError) {
         // Se não existe, criar
-        await supabase.rpc('update_global_leaderboard');
+        await supabase.rpc('update_global_leaderboard')
       }
 
       // Buscar entradas
@@ -49,44 +49,46 @@ export default function LeaderboardPage() {
         `)
         .eq('leaderboard_id', leaderboardData?.id)
         .order('rank', { ascending: true })
-        .limit(100);
+        .limit(100)
 
-      if (error) throw error;
-      setEntries(data || []);
+      if (error) throw error
+      setEntries(data || [])
 
       // Buscar posição do usuário atual
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (user) {
-        const userEntry = data?.find((e: any) => e.user_id === user.id);
-        setUserRank(userEntry);
+        const userEntry = data?.find((e: any) => e.user_id === user.id)
+        setUserRank(userEntry)
       }
     } catch (error) {
-      console.error('Error loading leaderboard:', error);
+      console.error('Error loading leaderboard:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   function getPeriodStart(period: LeaderboardPeriod): string {
-    const now = new Date();
+    const now = new Date()
     switch (period) {
       case 'weekly': {
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        return weekStart.toISOString().split('T')[0];
+        const weekStart = new Date(now)
+        weekStart.setDate(now.getDate() - now.getDay())
+        return weekStart.toISOString().split('T')[0]
       }
       case 'monthly':
-        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
       default:
-        return '2024-01-01';
+        return '2024-01-01'
     }
   }
 
   function getRankIcon(rank: number) {
-    if (rank === 1) return <Crown className="w-6 h-6 text-yellow-500" />;
-    if (rank === 2) return <Medal className="w-6 h-6 text-gray-400" />;
-    if (rank === 3) return <Medal className="w-6 h-6 text-orange-600" />;
-    return <span className="text-lg font-bold text-gray-600">#{rank}</span>;
+    if (rank === 1) return <Crown className="w-6 h-6 text-yellow-500" />
+    if (rank === 2) return <Medal className="w-6 h-6 text-gray-400" />
+    if (rank === 3) return <Medal className="w-6 h-6 text-orange-600" />
+    return <span className="text-lg font-bold text-gray-600">#{rank}</span>
   }
 
   return (
@@ -131,9 +133,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold">Sua Posição</h3>
-                  <p className="text-white/80">
-                    {userRank.score.toLocaleString()} XP
-                  </p>
+                  <p className="text-white/80">{userRank.score.toLocaleString()} XP</p>
                 </div>
               </div>
               <TrendingUp className="w-12 h-12 opacity-50" />
@@ -197,5 +197,5 @@ export default function LeaderboardPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

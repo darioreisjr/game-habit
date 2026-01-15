@@ -1,91 +1,92 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import type { Achievement, UserAchievement } from '@/types/database.types';
-import { AchievementCard } from './achievement-card';
-import { createClient } from '@/lib/supabase/client';
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import type { Achievement, UserAchievement } from '@/types/database.types'
+import { AchievementCard } from './achievement-card'
 
-type AchievementCategory = 'all' | 'streak' | 'level' | 'habits' | 'challenges' | 'special';
+type AchievementCategory = 'all' | 'streak' | 'level' | 'habits' | 'challenges' | 'special'
 
 export function AchievementsList() {
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] =
-    useState<AchievementCategory>('all');
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState<AchievementCategory>('all')
 
   useEffect(() => {
-    loadAchievements();
-  }, [loadAchievements]);
+    loadAchievements()
+  }, [loadAchievements])
 
   async function loadAchievements() {
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       // Load all achievements
-      const { data: achievementsData, error: achievementsError } =
-        await supabase
-          .from('achievements')
-          .select('*')
-          .order('rarity')
-          .order('xp_reward');
+      const { data: achievementsData, error: achievementsError } = await supabase
+        .from('achievements')
+        .select('*')
+        .order('rarity')
+        .order('xp_reward')
 
-      if (achievementsError) throw achievementsError;
+      if (achievementsError) throw achievementsError
 
       // Load user's unlocked achievements
-      const { data: userAchievementsData, error: userAchievementsError } =
-        await supabase
-          .from('user_achievements')
-          .select('*, achievement:achievements(*)')
-          .eq('user_id', user.id);
+      const { data: userAchievementsData, error: userAchievementsError } = await supabase
+        .from('user_achievements')
+        .select('*, achievement:achievements(*)')
+        .eq('user_id', user.id)
 
-      if (userAchievementsError) throw userAchievementsError;
+      if (userAchievementsError) throw userAchievementsError
 
-      setAchievements(achievementsData || []);
-      setUserAchievements(userAchievementsData || []);
+      setAchievements(achievementsData || [])
+      setUserAchievements(userAchievementsData || [])
 
       // Check for new achievements
-      await supabase.rpc('check_achievements', { p_user_id: user.id });
+      await supabase.rpc('check_achievements', { p_user_id: user.id })
     } catch (error) {
-      console.error('Error loading achievements:', error);
+      console.error('Error loading achievements:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function handleShare(userAchievementId: string) {
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       const { data, error } = await supabase.rpc('share_achievement', {
         p_user_id: user.id,
         p_user_achievement_id: userAchievementId,
         p_message: 'Olha só o que eu consegui! 🎮',
-      });
+      })
 
-      if (error) throw error;
+      if (error) throw error
 
       if (data.success) {
-        const shareUrl = `${window.location.origin}/share/${data.share_url}`;
+        const shareUrl = `${window.location.origin}/share/${data.share_url}`
 
         // Copy to clipboard
-        await navigator.clipboard.writeText(shareUrl);
-        alert('Link copiado! Compartilhe sua conquista com os amigos.');
+        await navigator.clipboard.writeText(shareUrl)
+        alert('Link copiado! Compartilhe sua conquista com os amigos.')
       }
     } catch (error) {
-      console.error('Error sharing achievement:', error);
-      alert('Erro ao compartilhar conquista. Tente novamente.');
+      console.error('Error sharing achievement:', error)
+      alert('Erro ao compartilhar conquista. Tente novamente.')
     }
   }
 
   const filteredAchievements =
     selectedCategory === 'all'
       ? achievements
-      : achievements.filter((a) => a.category === selectedCategory);
+      : achievements.filter((a) => a.category === selectedCategory)
 
   const categories: { value: AchievementCategory; label: string; emoji: string }[] = [
     { value: 'all', label: 'Todas', emoji: '🏆' },
@@ -94,11 +95,11 @@ export function AchievementsList() {
     { value: 'habits', label: 'Hábitos', emoji: '✅' },
     { value: 'challenges', label: 'Desafios', emoji: '👹' },
     { value: 'special', label: 'Especiais', emoji: '🌟' },
-  ];
+  ]
 
-  const unlockedCount = userAchievements.length;
-  const totalCount = achievements.length;
-  const percentage = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+  const unlockedCount = userAchievements.length
+  const totalCount = achievements.length
+  const percentage = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0
 
   if (loading) {
     return (
@@ -111,7 +112,7 @@ export function AchievementsList() {
           ))}
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -155,7 +156,7 @@ export function AchievementsList() {
         {filteredAchievements.map((achievement) => {
           const userAchievement = userAchievements.find(
             (ua) => ua.achievement_id === achievement.id
-          );
+          )
 
           return (
             <AchievementCard
@@ -164,7 +165,7 @@ export function AchievementsList() {
               userAchievement={userAchievement}
               onShare={handleShare}
             />
-          );
+          )
         })}
       </div>
 
@@ -177,5 +178,5 @@ export function AchievementsList() {
         </div>
       )}
     </div>
-  );
+  )
 }

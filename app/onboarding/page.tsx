@@ -1,11 +1,11 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
 
 const SUGGESTED_AREAS = [
   { name: 'Saude', icon: 'Dumbbell', color: '#23C55E' },
@@ -14,9 +14,9 @@ const SUGGESTED_AREAS = [
   { name: 'Casa', icon: 'Home', color: '#F7C600' },
   { name: 'Financas', icon: 'Wallet', color: '#10B981' },
   { name: 'Social', icon: 'Users', color: '#8B5CF6' },
-];
+]
 
-type Difficulty = 'easy' | 'medium' | 'hard';
+type Difficulty = 'easy' | 'medium' | 'hard'
 
 const SUGGESTED_HABITS: Record<string, { name: string; difficulty: Difficulty }[]> = {
   Saude: [
@@ -34,64 +34,65 @@ const SUGGESTED_HABITS: Record<string, { name: string; difficulty: Difficulty }[
     { name: 'Lavar louca', difficulty: 'easy' },
     { name: 'Organizar 15min', difficulty: 'easy' },
   ],
-};
+}
 
 export default function OnboardingPage() {
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [selectedAreas, setSelectedAreas] = useState<string[]>(['Saude', 'Estudos', 'Casa']);
-  const [selectedHabits, setSelectedHabits] = useState<string[]>([]);
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [selectedAreas, setSelectedAreas] = useState<string[]>(['Saude', 'Estudos', 'Casa'])
+  const [selectedHabits, setSelectedHabits] = useState<string[]>([])
 
   const toggleArea = (area: string) => {
-    setSelectedAreas(prev =>
-      prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
-    );
-  };
+    setSelectedAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    )
+  }
 
   const toggleHabit = (habit: string) => {
-    setSelectedHabits(prev =>
-      prev.includes(habit) ? prev.filter(h => h !== habit) : [...prev, habit]
-    );
-  };
+    setSelectedHabits((prev) =>
+      prev.includes(habit) ? prev.filter((h) => h !== habit) : [...prev, habit]
+    )
+  }
 
   const handleComplete = async () => {
-    setLoading(true);
-    const supabase = createClient();
+    setLoading(true)
+    const supabase = createClient()
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
-      setLoading(false);
-      return;
+      setLoading(false)
+      return
     }
 
     // Criar areas
-    const areasToCreate = SUGGESTED_AREAS
-      .filter(area => selectedAreas.includes(area.name))
-      .map((area, index) => ({
+    const areasToCreate = SUGGESTED_AREAS.filter((area) => selectedAreas.includes(area.name)).map(
+      (area, index) => ({
         user_id: user.id,
         name: area.name,
         color: area.color,
         icon: area.icon,
         order_index: index,
-      }));
+      })
+    )
 
-    const { data: createdAreas } = await supabase
-      .from('areas')
-      .insert(areasToCreate)
-      .select();
+    const { data: createdAreas } = await supabase.from('areas').insert(areasToCreate).select()
 
     if (createdAreas) {
       // Criar habitos
-      const habitsToCreate = selectedHabits.map(habitName => {
-        const areaName = Object.keys(SUGGESTED_HABITS).find(area =>
-          SUGGESTED_HABITS[area as keyof typeof SUGGESTED_HABITS].some(h => h.name === habitName)
-        );
+      const habitsToCreate = selectedHabits.map((habitName) => {
+        const areaName = Object.keys(SUGGESTED_HABITS).find((area) =>
+          SUGGESTED_HABITS[area as keyof typeof SUGGESTED_HABITS].some((h) => h.name === habitName)
+        )
         const habitData = areaName
-          ? SUGGESTED_HABITS[areaName as keyof typeof SUGGESTED_HABITS].find(h => h.name === habitName)
-          : null;
+          ? SUGGESTED_HABITS[areaName as keyof typeof SUGGESTED_HABITS].find(
+              (h) => h.name === habitName
+            )
+          : null
 
-        const area = createdAreas.find(a => a.name === areaName);
+        const area = createdAreas.find((a) => a.name === areaName)
 
         return {
           user_id: user.id,
@@ -100,22 +101,22 @@ export default function OnboardingPage() {
           type: 'boolean',
           difficulty: habitData?.difficulty || 'easy',
           frequency: { type: 'daily' },
-        };
-      });
+        }
+      })
 
-      await supabase.from('habits').insert(habitsToCreate);
+      await supabase.from('habits').insert(habitsToCreate)
     }
 
-    router.push('/');
-    router.refresh();
-  };
+    router.push('/')
+    router.refresh()
+  }
 
   const getAvailableHabits = () => {
-    return selectedAreas.flatMap(area => {
-      const areaHabits = SUGGESTED_HABITS[area];
-      return areaHabits || [];
-    });
-  };
+    return selectedAreas.flatMap((area) => {
+      const areaHabits = SUGGESTED_HABITS[area]
+      return areaHabits || []
+    })
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-mario-red/10 to-mario-blue/10">
@@ -131,7 +132,7 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {SUGGESTED_AREAS.map(area => (
+                {SUGGESTED_AREAS.map((area) => (
                   <button
                     key={area.name}
                     type="button"
@@ -162,10 +163,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
               <div className="flex justify-end pt-4">
-                <Button
-                  onClick={() => setStep(2)}
-                  disabled={selectedAreas.length === 0}
-                >
+                <Button onClick={() => setStep(2)} disabled={selectedAreas.length === 0}>
                   Proximo
                 </Button>
               </div>
@@ -193,8 +191,8 @@ export default function OnboardingPage() {
                           habit.difficulty === 'easy'
                             ? 'success'
                             : habit.difficulty === 'medium'
-                            ? 'blue'
-                            : 'warning'
+                              ? 'blue'
+                              : 'warning'
                         }
                       >
                         {habit.difficulty === 'easy' && 'Facil'}
@@ -218,5 +216,5 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
