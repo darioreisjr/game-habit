@@ -32,7 +32,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
   const totalCount = habits.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  const handleCompleteHabit = async (habitId: string, difficulty: string) => {
+  const handleCompleteHabit = async (habitId: string, _difficulty: string) => {
     setCompletingHabit(habitId);
 
     const supabase = createClient();

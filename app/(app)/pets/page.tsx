@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Heart, Battery, UtensilsCrossed, Star, Gift, Play, Sparkles } from 'lucide-react';
+import { Heart, Battery, UtensilsCrossed, Star, Play, Sparkles } from 'lucide-react';
 import type { UserPet, PetType } from '@/types/database.types';
 
 export default function PetsPage() {
@@ -10,13 +10,13 @@ export default function PetsPage() {
   const [pets, setPets] = useState<UserPet[]>([]);
   const [activePet, setActivePet] = useState<UserPet | null>(null);
   const [availablePets, setAvailablePets] = useState<PetType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'my-pets' | 'adopt'>('my-pets');
 
   useEffect(() => {
     loadUserPets();
     loadAvailablePets();
-  }, []);
+  }, [loadAvailablePets, loadUserPets]);
 
   async function loadUserPets() {
     try {
@@ -74,7 +74,7 @@ export default function PetsPage() {
         alert(data?.message || 'Erro na interação');
       }
     } catch (error: any) {
-      alert('Erro: ' + error.message);
+      alert(`Erro: ${error.message}`);
     }
   }
 
@@ -119,7 +119,7 @@ export default function PetsPage() {
       loadUserPets();
       setTab('my-pets');
     } catch (error: any) {
-      alert('Erro ao adotar pet: ' + error.message);
+      alert(`Erro ao adotar pet: ${error.message}`);
     }
   }
 

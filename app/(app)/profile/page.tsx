@@ -19,10 +19,6 @@ export default function ProfilePage() {
   const [totalCheckins, setTotalCheckins] = useState(0);
   const [totalHabits, setTotalHabits] = useState(0);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     const supabase = createClient();
 
@@ -66,6 +62,10 @@ export default function ProfilePage() {
 
     setTotalHabits(habitsCount || 0);
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

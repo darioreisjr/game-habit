@@ -19,17 +19,6 @@ export default function HabitsPage() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [showArchived, selectedArea]);
-
-  useEffect(() => {
-    if (searchParams.get('new') === '1') {
-      setEditingHabit(null);
-      setShowForm(true);
-    }
-  }, [searchParams]);
-
   const loadData = async () => {
     const supabase = createClient();
 
@@ -54,6 +43,17 @@ export default function HabitsPage() {
 
     if (habitsData) setHabits(habitsData as any);
   };
+
+  useEffect(() => {
+    loadData();
+  }, [selectedArea, showArchived]);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setEditingHabit(null);
+      setShowForm(true);
+    }
+  }, [searchParams]);
 
   const handleArchive = async (habitId: string) => {
     const supabase = createClient();

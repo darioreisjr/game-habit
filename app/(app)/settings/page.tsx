@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Theme, UserPreferences, InventoryItem } from '@/types/database.types';
+import type { Theme, UserPreferences, InventoryItem } from '@/types/database.types';
 import { Settings, Palette, Bell, Lock } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -12,10 +11,6 @@ export default function SettingsPage() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     const supabase = createClient();
@@ -49,6 +44,10 @@ export default function SettingsPage() {
     setInventory(inventoryData || []);
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleChangeTheme = async (themeKey: string) => {
     const supabase = createClient();

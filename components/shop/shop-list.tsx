@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ShopItem, Stats } from '@/types/database.types';
+import type { ShopItem, Stats } from '@/types/database.types';
 import { ShopItemCard } from './shop-item-card';
 import { createClient } from '@/lib/supabase/client';
-import { Badge } from '@/components/ui/badge';
 
 type ShopCategory = 'all' | 'powerup' | 'theme' | 'boost' | 'cosmetic';
 
@@ -16,7 +15,7 @@ export function ShopList() {
 
   useEffect(() => {
     loadShopData();
-  }, []);
+  }, [loadShopData]);
 
   async function loadShopData() {
     try {

@@ -6,18 +6,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AreaForm } from '@/components/areas/area-form';
-import { Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
-import type { Area, Habit } from '@/types/database.types';
+import { Plus, Edit2, Trash2, } from 'lucide-react';
+import type { Area, } from '@/types/database.types';
 
 export default function AreasPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [habitCounts, setHabitCounts] = useState<Record<string, number>>({});
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     const supabase = createClient();
@@ -45,6 +41,10 @@ export default function AreasPage() {
       setHabitCounts(counts);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleDelete = async (areaId: string) => {
     const habitCount = habitCounts[areaId] || 0;
@@ -121,7 +121,7 @@ export default function AreasPage() {
                 {/* Icon and Color */}
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ backgroundColor: area.color + '20' }}
+                  style={{ backgroundColor: `${area.color}20` }}
                 >
                   {area.icon}
                 </div>
@@ -133,7 +133,7 @@ export default function AreasPage() {
                     <Badge
                       variant="secondary"
                       style={{
-                        backgroundColor: area.color + '20',
+                        backgroundColor: `${area.color}20`,
                         color: area.color,
                       }}
                     >

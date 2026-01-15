@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Home, Dumbbell, BookOpen, Briefcase, Wallet, Users } from 'lucide-react';
 
 const SUGGESTED_AREAS = [
   { name: 'Saude', icon: 'Dumbbell', color: '#23C55E' },
@@ -146,7 +145,7 @@ export default function OnboardingPage() {
                     <div className="flex flex-col items-center gap-2">
                       <div
                         className="w-12 h-12 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: area.color + '20' }}
+                        style={{ backgroundColor: `${area.color}20` }}
                       >
                         <span className="text-2xl">
                           {area.icon === 'Dumbbell' && '💪'}
