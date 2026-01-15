@@ -281,7 +281,7 @@ export default function FriendsPage() {
                         <h3 className="font-semibold text-gray-900">{user.display_name}</h3>
                         <p className="text-sm text-gray-600">@{user.username}</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Código: {user.friend_code} • Nível {user.level}
+                          Código: {user.friend_code}
                         </p>
                       </div>
                     </div>
