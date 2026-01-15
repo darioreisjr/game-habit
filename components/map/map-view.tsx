@@ -62,14 +62,11 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
       return [...prev, optimisticCheckin];
     });
 
-    const { error } = await supabase.from('checkins').insert(
-      {
-        habit_id: habitId,
-        user_id: user.id,
-        date: today,
-      },
-      { returning: 'minimal' }
-    );
+    const { error } = await supabase.from('checkins').insert({
+      habit_id: habitId,
+      user_id: user.id,
+      date: today,
+    });
 
     if (error && error.code !== '23505') {
       console.error('Erro ao salvar checkin:', error);
