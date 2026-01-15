@@ -1,63 +1,60 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import type { Habit, Area, HabitDifficulty } from '@/types/database.types';
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { createClient } from '@/lib/supabase/client'
+import type { Area, Habit, HabitDifficulty } from '@/types/database.types'
 
-const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 interface HabitFormProps {
-  habit?: Habit;
-  onSuccess: () => void;
-  onCancel: () => void;
+  habit?: Habit
+  onSuccess: () => void
+  onCancel: () => void
 }
 
 export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
-  const [name, setName] = useState(habit?.name || '');
-  const [areaId, setAreaId] = useState(habit?.area_id || '');
-  const [difficulty, setDifficulty] = useState<HabitDifficulty>(habit?.difficulty || 'medium');
+  const [name, setName] = useState(habit?.name || '')
+  const [areaId, setAreaId] = useState(habit?.area_id || '')
+  const [difficulty, setDifficulty] = useState<HabitDifficulty>(habit?.difficulty || 'medium')
   const [frequencyType, setFrequencyType] = useState<'daily' | 'weekly' | 'custom'>(
     habit?.frequency?.type || 'daily'
-  );
-  const [selectedDays, setSelectedDays] = useState<number[]>(habit?.frequency?.days || []);
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [loading, setLoading] = useState(false);
+  )
+  const [selectedDays, setSelectedDays] = useState<number[]>(habit?.frequency?.days || [])
+  const [areas, setAreas] = useState<Area[]>([])
+  const [loading, setLoading] = useState(false)
 
   const loadAreas = async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('areas')
-      .select('*')
-      .order('order_index');
+    const supabase = createClient()
+    const { data } = await supabase.from('areas').select('*').order('order_index')
 
-    if (data) setAreas(data);
-  };
+    if (data) setAreas(data)
+  }
 
   useEffect(() => {
-    loadAreas();
-  }, []);
+    loadAreas()
+  }, [])
 
   const toggleDay = (day: number) => {
-    setSelectedDays(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
-  };
+    setSelectedDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!user) return;
+    if (!user) return
 
     const frequency = {
       type: frequencyType,
       ...(frequencyType === 'custom' && { days: selectedDays }),
-    };
+    }
 
     const habitData = {
       user_id: user.id,
@@ -66,20 +63,17 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
       type: 'boolean',
       difficulty,
       frequency,
-    };
-
-    if (habit) {
-      await supabase
-        .from('habits')
-        .update(habitData)
-        .eq('id', habit.id);
-    } else {
-      await supabase.from('habits').insert(habitData);
     }
 
-    setLoading(false);
-    onSuccess();
-  };
+    if (habit) {
+      await supabase.from('habits').update(habitData).eq('id', habit.id)
+    } else {
+      await supabase.from('habits').insert(habitData)
+    }
+
+    setLoading(false)
+    onSuccess()
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -145,9 +139,7 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
             type="button"
             onClick={() => setFrequencyType('daily')}
             className={`flex-1 p-3 rounded-xl border-2 transition-all ${
-              frequencyType === 'daily'
-                ? 'border-mario-red bg-mario-red/5'
-                : 'border-border'
+              frequencyType === 'daily' ? 'border-mario-red bg-mario-red/5' : 'border-border'
             }`}
           >
             Diário
@@ -156,9 +148,7 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
             type="button"
             onClick={() => setFrequencyType('custom')}
             className={`flex-1 p-3 rounded-xl border-2 transition-all ${
-              frequencyType === 'custom'
-                ? 'border-mario-red bg-mario-red/5'
-                : 'border-border'
+              frequencyType === 'custom' ? 'border-mario-red bg-mario-red/5' : 'border-border'
             }`}
           >
             Personalizado
@@ -194,5 +184,5 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
         </Button>
       </div>
     </form>
-  );
+  )
 }

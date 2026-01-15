@@ -1,50 +1,50 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { StatsDisplay } from '@/components/ui/stats-display';
-import { Badge } from '@/components/ui/badge';
-import { Flag, Check, Plus } from 'lucide-react';
-import type { Stats, Profile, Habit, Checkin } from '@/types/database.types';
-import { getXPForDifficulty } from '@/lib/utils';
+import { Check, Flag, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { StatsDisplay } from '@/components/ui/stats-display'
+import { createClient } from '@/lib/supabase/client'
+import { getXPForDifficulty } from '@/lib/utils'
+import type { Checkin, Habit, Profile, Stats } from '@/types/database.types'
 
 interface MapViewProps {
-  stats: Stats;
-  profile: Profile;
-  habits: Habit[];
-  checkins: Checkin[];
+  stats: Stats
+  profile: Profile
+  habits: Habit[]
+  checkins: Checkin[]
 }
 
 export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
-  const router = useRouter();
-  const [completingHabit, setCompletingHabit] = useState<string | null>(null);
-  const [localCheckins, setLocalCheckins] = useState(checkins);
+  const router = useRouter()
+  const [completingHabit, setCompletingHabit] = useState<string | null>(null)
+  const [localCheckins, setLocalCheckins] = useState(checkins)
 
   useEffect(() => {
-    setLocalCheckins(checkins);
-  }, [checkins]);
+    setLocalCheckins(checkins)
+  }, [checkins])
 
-  const completedHabitIds = new Set(localCheckins.map((c) => c.habit_id));
-  const completedCount = completedHabitIds.size;
-  const totalCount = habits.length;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const completedHabitIds = new Set(localCheckins.map((c) => c.habit_id))
+  const completedCount = completedHabitIds.size
+  const totalCount = habits.length
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   const handleCompleteHabit = async (habitId: string, _difficulty: string) => {
-    setCompletingHabit(habitId);
+    setCompletingHabit(habitId)
 
-    const supabase = createClient();
+    const supabase = createClient()
     const {
       data: { user },
-    } = await supabase.auth.getUser();
-    const today = new Date().toISOString().split('T')[0];
+    } = await supabase.auth.getUser()
+    const today = new Date().toISOString().split('T')[0]
 
     if (!user) {
-      alert('Sessao expirada. Faça login novamente.');
-      setCompletingHabit(null);
-      return;
+      alert('Sessao expirada. Faça login novamente.')
+      setCompletingHabit(null)
+      return
     }
 
     const optimisticCheckin = {
@@ -53,39 +53,37 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
       user_id: user.id,
       date: today,
       created_at: new Date().toISOString(),
-    };
+    }
 
     setLocalCheckins((prev) => {
       if (prev.some((c) => c.habit_id === habitId && c.date === today)) {
-        return prev;
+        return prev
       }
-      return [...prev, optimisticCheckin];
-    });
+      return [...prev, optimisticCheckin]
+    })
 
     const { error } = await supabase.from('checkins').insert({
       habit_id: habitId,
       user_id: user.id,
       date: today,
-    });
+    })
 
     if (error && error.code !== '23505') {
-      console.error('Erro ao salvar checkin:', error);
-      alert(`Nao foi possivel salvar o checkin: ${error.message}`);
-      setLocalCheckins((prev) =>
-        prev.filter((c) => !(c.habit_id === habitId && c.date === today))
-      );
+      console.error('Erro ao salvar checkin:', error)
+      alert(`Nao foi possivel salvar o checkin: ${error.message}`)
+      setLocalCheckins((prev) => prev.filter((c) => !(c.habit_id === habitId && c.date === today)))
     }
 
-    setCompletingHabit(null);
-    router.refresh();
-  };
+    setCompletingHabit(null)
+    router.refresh()
+  }
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
-  };
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Bom dia'
+    if (hour < 18) return 'Boa tarde'
+    return 'Boa noite'
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
@@ -98,12 +96,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
           <p className="text-text-secondary mt-1">Mundo 1-1: Hoje</p>
         </div>
 
-        <StatsDisplay
-          level={stats.level}
-          xp={stats.xp}
-          coins={stats.coins}
-          variant="compact"
-        />
+        <StatsDisplay level={stats.level} xp={stats.xp} coins={stats.coins} variant="compact" />
       </div>
 
       {/* Progress Banner */}
@@ -146,16 +139,14 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
 
         {habits.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-text-secondary mb-4">
-              Você ainda não tem hábitos configurados.
-            </p>
+            <p className="text-text-secondary mb-4">Você ainda não tem hábitos configurados.</p>
             <Button onClick={() => router.push('/habits?new=1')}>Criar primeiro hábito</Button>
           </Card>
         ) : (
           <div className="space-y-3">
             {habits.map((habit) => {
-              const isCompleted = completedHabitIds.has(habit.id);
-              const isLoading = completingHabit === habit.id;
+              const isCompleted = completedHabitIds.has(habit.id)
+              const isLoading = completingHabit === habit.id
 
               return (
                 <Card
@@ -166,7 +157,9 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
                 >
                   <div className="p-4 flex items-center gap-4">
                     <button
-                      onClick={() => !isCompleted && handleCompleteHabit(habit.id, habit.difficulty)}
+                      onClick={() =>
+                        !isCompleted && handleCompleteHabit(habit.id, habit.difficulty)
+                      }
                       disabled={isCompleted || isLoading}
                       className={`flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
                         isCompleted
@@ -174,7 +167,11 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
                           : 'border-border hover:border-mario-red hover:scale-110'
                       }`}
                     >
-                      {isCompleted ? <Check size={24} /> : <div className="w-6 h-6 rounded-full bg-background-light" />}
+                      {isCompleted ? (
+                        <Check size={24} />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-background-light" />
+                      )}
                     </button>
 
                     <div className="flex-1 min-w-0">
@@ -202,8 +199,8 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
                           habit.difficulty === 'easy'
                             ? 'success'
                             : habit.difficulty === 'medium'
-                            ? 'blue'
-                            : 'warning'
+                              ? 'blue'
+                              : 'warning'
                         }
                       >
                         +{getXPForDifficulty(habit.difficulty)} XP
@@ -211,7 +208,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
                     </div>
                   </div>
                 </Card>
-              );
+              )
             })}
           </div>
         )}
@@ -230,5 +227,5 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
         </Card>
       )}
     </div>
-  );
+  )
 }

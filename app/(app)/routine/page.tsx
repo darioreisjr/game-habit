@@ -1,75 +1,75 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, } from 'lucide-react';
-import { format, startOfWeek, addDays, isSameDay, subWeeks, addWeeks, startOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import type { Habit, Checkin, Area } from '@/types/database.types';
+import { addDays, addWeeks, format, isSameDay, startOfDay, startOfWeek, subWeeks } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
+import type { Area, Checkin, Habit } from '@/types/database.types'
 
 export default function RoutinePage() {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([]);
-  const [checkins, setCheckins] = useState<Checkin[]>([]);
+  const [currentWeek, setCurrentWeek] = useState(new Date())
+  const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([])
+  const [checkins, setCheckins] = useState<Checkin[]>([])
 
   const loadData = async () => {
-    const supabase = createClient();
+    const supabase = createClient()
 
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*, area:areas(*)')
       .eq('is_archived', false)
-      .order('created_at');
+      .order('created_at')
 
-    if (habitsData) setHabits(habitsData as any);
+    if (habitsData) setHabits(habitsData as any)
 
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
-    const weekEnd = addDays(weekStart, 6);
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 })
+    const weekEnd = addDays(weekStart, 6)
 
     const { data: checkinsData } = await supabase
       .from('checkins')
       .select('*')
       .gte('date', format(weekStart, 'yyyy-MM-dd'))
-      .lte('date', format(weekEnd, 'yyyy-MM-dd'));
+      .lte('date', format(weekEnd, 'yyyy-MM-dd'))
 
-    if (checkinsData) setCheckins(checkinsData);
-  };
+    if (checkinsData) setCheckins(checkinsData)
+  }
 
   useEffect(() => {
-    loadData();
-  }, [currentWeek]);
+    loadData()
+  }, [currentWeek])
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 })
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   const getCheckinsForDate = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return checkins.filter((c) => c.date === dateStr);
-  };
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return checkins.filter((c) => c.date === dateStr)
+  }
 
   const isHabitCompletedOnDate = (habitId: string, date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return checkins.some((c) => c.habit_id === habitId && c.date === dateStr);
-  };
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return checkins.some((c) => c.habit_id === habitId && c.date === dateStr)
+  }
 
   const getStreakForHabit = (habitId: string) => {
-    let streak = 0;
-    let currentDate = startOfDay(new Date());
+    let streak = 0
+    let currentDate = startOfDay(new Date())
 
     while (true) {
-      const dateStr = format(currentDate, 'yyyy-MM-dd');
-      const hasCheckin = checkins.some((c) => c.habit_id === habitId && c.date === dateStr);
+      const dateStr = format(currentDate, 'yyyy-MM-dd')
+      const hasCheckin = checkins.some((c) => c.habit_id === habitId && c.date === dateStr)
 
-      if (!hasCheckin) break;
+      if (!hasCheckin) break
 
-      streak++;
-      currentDate = addDays(currentDate, -1);
+      streak++
+      currentDate = addDays(currentDate, -1)
     }
 
-    return streak;
-  };
+    return streak
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
@@ -108,10 +108,10 @@ export default function RoutinePage() {
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-2">
           {weekDays.map((day) => {
-            const dayCheckins = getCheckinsForDate(day);
-            const isToday = isSameDay(day, new Date());
+            const dayCheckins = getCheckinsForDate(day)
+            const isToday = isSameDay(day, new Date())
             const completionRate =
-              habits.length > 0 ? (dayCheckins.length / habits.length) * 100 : 0;
+              habits.length > 0 ? (dayCheckins.length / habits.length) * 100 : 0
 
             return (
               <div
@@ -140,7 +140,7 @@ export default function RoutinePage() {
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       </Card>
@@ -156,7 +156,7 @@ export default function RoutinePage() {
         ) : (
           <div className="space-y-2">
             {habits.map((habit) => {
-              const streak = getStreakForHabit(habit.id);
+              const streak = getStreakForHabit(habit.id)
 
               return (
                 <Card key={habit.id} className="p-4">
@@ -180,8 +180,8 @@ export default function RoutinePage() {
 
                   <div className="grid grid-cols-7 gap-2">
                     {weekDays.map((day) => {
-                      const isCompleted = isHabitCompletedOnDate(habit.id, day);
-                      const isToday = isSameDay(day, new Date());
+                      const isCompleted = isHabitCompletedOnDate(habit.id, day)
+                      const isToday = isSameDay(day, new Date())
 
                       return (
                         <div
@@ -190,21 +190,21 @@ export default function RoutinePage() {
                             isCompleted
                               ? 'bg-mario-green text-white'
                               : isToday
-                              ? 'bg-background-light border-2 border-mario-red'
-                              : 'bg-background-light'
+                                ? 'bg-background-light border-2 border-mario-red'
+                                : 'bg-background-light'
                           }`}
                         >
                           {isCompleted ? '✓' : format(day, 'd')}
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 </Card>
-              );
+              )
             })}
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }

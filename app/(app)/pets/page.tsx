@@ -1,27 +1,29 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Heart, Battery, UtensilsCrossed, Star, Play, Sparkles } from 'lucide-react';
-import type { UserPet, PetType } from '@/types/database.types';
+import { Battery, Heart, Play, Sparkles, Star, UtensilsCrossed } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import type { PetType, UserPet } from '@/types/database.types'
 
 export default function PetsPage() {
-  const supabase = createClient();
-  const [pets, setPets] = useState<UserPet[]>([]);
-  const [activePet, setActivePet] = useState<UserPet | null>(null);
-  const [availablePets, setAvailablePets] = useState<PetType[]>([]);
-  const [_loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'my-pets' | 'adopt'>('my-pets');
+  const supabase = createClient()
+  const [pets, setPets] = useState<UserPet[]>([])
+  const [activePet, setActivePet] = useState<UserPet | null>(null)
+  const [availablePets, setAvailablePets] = useState<PetType[]>([])
+  const [_loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'my-pets' | 'adopt'>('my-pets')
 
   useEffect(() => {
-    loadUserPets();
-    loadAvailablePets();
-  }, [loadAvailablePets, loadUserPets]);
+    loadUserPets()
+    loadAvailablePets()
+  }, [loadAvailablePets, loadUserPets])
 
   async function loadUserPets() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
       const { data, error } = await supabase
         .from('user_pets')
@@ -30,16 +32,16 @@ export default function PetsPage() {
           pet_type:pet_type_id (*)
         `)
         .eq('user_id', user.id)
-        .order('is_active', { ascending: false });
+        .order('is_active', { ascending: false })
 
-      if (error) throw error;
-      setPets(data || []);
-      const active = data?.find((p: any) => p.is_active);
-      if (active) setActivePet(active);
+      if (error) throw error
+      setPets(data || [])
+      const active = data?.find((p: any) => p.is_active)
+      if (active) setActivePet(active)
     } catch (error) {
-      console.error('Error loading pets:', error);
+      console.error('Error loading pets:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -48,85 +50,87 @@ export default function PetsPage() {
       const { data, error } = await supabase
         .from('pet_types')
         .select('*')
-        .order('rarity', { ascending: true });
+        .order('rarity', { ascending: true })
 
-      if (error) throw error;
-      setAvailablePets(data || []);
+      if (error) throw error
+      setAvailablePets(data || [])
     } catch (error) {
-      console.error('Error loading pet types:', error);
+      console.error('Error loading pet types:', error)
     }
   }
 
   async function interactWithPet(interaction: string) {
-    if (!activePet) return;
+    if (!activePet) return
 
     try {
       const { data, error } = await supabase.rpc('interact_with_pet', {
         target_pet_id: activePet.id,
-        interaction: interaction
-      });
+        interaction: interaction,
+      })
 
-      if (error) throw error;
+      if (error) throw error
       if (data?.success) {
-        alert(`${interaction} realizado com sucesso!`);
-        loadUserPets();
+        alert(`${interaction} realizado com sucesso!`)
+        loadUserPets()
       } else {
-        alert(data?.message || 'Erro na interação');
+        alert(data?.message || 'Erro na interação')
       }
     } catch (error: any) {
-      alert(`Erro: ${error.message}`);
+      alert(`Erro: ${error.message}`)
     }
   }
 
   async function adoptPet(petTypeId: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
-      const petType = availablePets.find(p => p.id === petTypeId);
-      if (!petType) return;
+      const petType = availablePets.find((p) => p.id === petTypeId)
+      if (!petType) return
 
       // Verificar se tem moedas suficientes
       const { data: stats } = await supabase
         .from('stats')
         .select('coins')
         .eq('user_id', user.id)
-        .single();
+        .single()
 
       if (stats && stats.coins < petType.price) {
-        alert('Moedas insuficientes!');
-        return;
+        alert('Moedas insuficientes!')
+        return
       }
 
       // Criar pet
       const { error: insertError } = await supabase.from('user_pets').insert({
         user_id: user.id,
         pet_type_id: petTypeId,
-        is_active: pets.length === 0 // Primeiro pet é ativo automaticamente
-      });
+        is_active: pets.length === 0, // Primeiro pet é ativo automaticamente
+      })
 
-      if (insertError) throw insertError;
+      if (insertError) throw insertError
 
       // Deduzir moedas
       if (petType.price > 0) {
         await supabase
           .from('stats')
           .update({ coins: stats!.coins - petType.price })
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
       }
 
-      alert('Pet adotado com sucesso! 🎉');
-      loadUserPets();
-      setTab('my-pets');
+      alert('Pet adotado com sucesso! 🎉')
+      loadUserPets()
+      setTab('my-pets')
     } catch (error: any) {
-      alert(`Erro ao adotar pet: ${error.message}`);
+      alert(`Erro ao adotar pet: ${error.message}`)
     }
   }
 
   function getStatColor(value: number) {
-    if (value >= 70) return 'bg-green-500';
-    if (value >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (value >= 70) return 'bg-green-500'
+    if (value >= 40) return 'bg-yellow-500'
+    return 'bg-red-500'
   }
 
   return (
@@ -295,14 +299,10 @@ export default function PetsPage() {
                           🦎
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">
-                            {pet.nickname || 'Pet'}
-                          </h4>
+                          <h4 className="font-semibold text-gray-900">{pet.nickname || 'Pet'}</h4>
                           <p className="text-sm text-gray-600">Nível {pet.level}</p>
                         </div>
-                        {pet.is_active && (
-                          <Star className="w-5 h-5 text-yellow-500" />
-                        )}
+                        {pet.is_active && <Star className="w-5 h-5 text-yellow-500" />}
                       </div>
                     </div>
                   ))
@@ -330,10 +330,10 @@ export default function PetsPage() {
                       petType.rarity === 'legendary'
                         ? 'bg-yellow-100 text-yellow-800'
                         : petType.rarity === 'epic'
-                        ? 'bg-purple-100 text-purple-800'
-                        : petType.rarity === 'rare'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
+                          ? 'bg-purple-100 text-purple-800'
+                          : petType.rarity === 'rare'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
                     }`}
                   >
                     {petType.rarity === 'legendary' && '⭐ Lendário'}
@@ -357,5 +357,5 @@ export default function PetsPage() {
         )}
       </div>
     </div>
-  );
+  )
 }

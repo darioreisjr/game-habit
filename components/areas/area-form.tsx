@@ -1,69 +1,72 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import type { Area } from '@/types/database.types';
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { createClient } from '@/lib/supabase/client'
+import type { Area } from '@/types/database.types'
 
 const COLORS = [
-  '#E52521', '#1E5BD8', '#F7C600', '#23C55E', '#8B5CF6', '#EC4899', '#F97316', '#10B981'
-];
+  '#E52521',
+  '#1E5BD8',
+  '#F7C600',
+  '#23C55E',
+  '#8B5CF6',
+  '#EC4899',
+  '#F97316',
+  '#10B981',
+]
 
-const ICONS = ['💪', '📚', '💼', '🏠', '💰', '👥', '🎮', '🎨', '🍎', '⚡'];
+const ICONS = ['💪', '📚', '💼', '🏠', '💰', '👥', '🎮', '🎨', '🍎', '⚡']
 
 interface AreaFormProps {
-  area?: Area;
-  onSuccess: () => void;
-  onCancel: () => void;
+  area?: Area
+  onSuccess: () => void
+  onCancel: () => void
 }
 
 export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
-  const [name, setName] = useState(area?.name || '');
-  const [color, setColor] = useState(area?.color || COLORS[0]);
-  const [icon, setIcon] = useState(area?.icon || ICONS[0]);
-  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState(area?.name || '')
+  const [color, setColor] = useState(area?.color || COLORS[0])
+  const [icon, setIcon] = useState(area?.icon || ICONS[0])
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!user) return;
+    if (!user) return
 
     if (area) {
-      await supabase
-        .from('areas')
-        .update({ name, color, icon })
-        .eq('id', area.id);
+      await supabase.from('areas').update({ name, color, icon }).eq('id', area.id)
     } else {
       const { data: existingAreas } = await supabase
         .from('areas')
         .select('order_index')
         .eq('user_id', user.id)
         .order('order_index', { ascending: false })
-        .limit(1);
+        .limit(1)
 
-      const nextOrder = existingAreas && existingAreas.length > 0
-        ? existingAreas[0].order_index + 1
-        : 0;
+      const nextOrder =
+        existingAreas && existingAreas.length > 0 ? existingAreas[0].order_index + 1 : 0
 
-      await supabase
-        .from('areas')
-        .insert({
-          user_id: user.id,
-          name,
-          color,
-          icon,
-          order_index: nextOrder,
-        });
+      await supabase.from('areas').insert({
+        user_id: user.id,
+        name,
+        color,
+        icon,
+        order_index: nextOrder,
+      })
     }
 
-    setLoading(false);
-    onSuccess();
-  };
+    setLoading(false)
+    onSuccess()
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -121,5 +124,5 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
         </Button>
       </div>
     </form>
-  );
+  )
 }

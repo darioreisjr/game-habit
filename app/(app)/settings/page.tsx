@@ -1,114 +1,114 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Theme, UserPreferences, InventoryItem } from '@/types/database.types';
-import { Settings, Palette, Bell, Lock } from 'lucide-react';
+import { Bell, Lock, Palette, Settings } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
+import type { InventoryItem, Theme, UserPreferences } from '@/types/database.types'
 
 export default function SettingsPage() {
-  const [themes, setThemes] = useState<Theme[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [themes, setThemes] = useState<Theme[]>([])
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
-    const supabase = createClient();
+    const supabase = createClient()
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser()
 
-    if (!user) return;
+    if (!user) return
 
     // Load themes
-    const { data: themesData } = await supabase.from('themes').select('*');
+    const { data: themesData } = await supabase.from('themes').select('*')
 
-    setThemes(themesData || []);
+    setThemes(themesData || [])
 
     // Load user preferences
     const { data: preferencesData } = await supabase
       .from('user_preferences')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .single()
 
-    setPreferences(preferencesData);
+    setPreferences(preferencesData)
 
     // Load user inventory (for theme ownership)
     const { data: inventoryData } = await supabase
       .from('inventory')
       .select('*')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
 
-    setInventory(inventoryData || []);
-    setLoading(false);
-  };
+    setInventory(inventoryData || [])
+    setLoading(false)
+  }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   const handleChangeTheme = async (themeKey: string) => {
-    const supabase = createClient();
+    const supabase = createClient()
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser()
 
-    if (!user) return;
+    if (!user) return
 
     const { data, error } = await supabase.rpc('change_theme', {
       p_user_id: user.id,
       p_theme_key: themeKey,
-    });
+    })
 
     if (error) {
-      console.error('Error changing theme:', error);
-      alert('Erro ao mudar tema. Tente novamente.');
-      return;
+      console.error('Error changing theme:', error)
+      alert('Erro ao mudar tema. Tente novamente.')
+      return
     }
 
     if (data.success) {
-      loadData();
-      alert('Tema alterado com sucesso!');
+      loadData()
+      alert('Tema alterado com sucesso!')
     } else {
-      alert(data.error || 'Você precisa desbloquear este tema na loja!');
+      alert(data.error || 'Você precisa desbloquear este tema na loja!')
     }
-  };
+  }
 
   const handleToggleNotifications = async () => {
-    if (!preferences) return;
+    if (!preferences) return
 
-    const supabase = createClient();
+    const supabase = createClient()
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser()
 
-    if (!user) return;
+    if (!user) return
 
     await supabase
       .from('user_preferences')
       .update({ notifications_enabled: !preferences.notifications_enabled })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
 
-    loadData();
-  };
+    loadData()
+  }
 
   const canUseTheme = (theme: Theme) => {
-    if (!theme.is_premium) return true;
-    if (!theme.requires_item) return true;
+    if (!theme.is_premium) return true
+    if (!theme.requires_item) return true
 
-    return inventory.some((item) => item.item_key === theme.requires_item);
-  };
+    return inventory.some((item) => item.item_key === theme.requires_item)
+  }
 
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto p-4 md:p-6 md:ml-64">
         <p>Carregando...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -129,14 +129,14 @@ export default function SettingsPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {themes.map((theme) => {
-              const isActive = preferences?.active_theme === theme.theme_key;
-              const canUse = canUseTheme(theme);
+              const isActive = preferences?.active_theme === theme.theme_key
+              const canUse = canUseTheme(theme)
               const colors = theme.colors as {
-                primary: string;
-                secondary: string;
-                accent: string;
-                background: string;
-              };
+                primary: string
+                secondary: string
+                accent: string
+                background: string
+              }
 
               return (
                 <div
@@ -145,16 +145,14 @@ export default function SettingsPage() {
                     isActive
                       ? 'border-mario-red bg-mario-red/5'
                       : canUse
-                      ? 'border-gray-200 hover:border-gray-300'
-                      : 'border-gray-100 opacity-50'
+                        ? 'border-gray-200 hover:border-gray-300'
+                        : 'border-gray-100 opacity-50'
                   }`}
                   onClick={() => canUse && handleChangeTheme(theme.theme_key)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="font-display font-bold text-lg">
-                        {theme.name}
-                      </h3>
+                      <h3 className="font-display font-bold text-lg">{theme.name}</h3>
                       <p className="text-sm text-gray-600">{theme.description}</p>
                     </div>
                     {!canUse && <Lock size={20} className="text-gray-400" />}
@@ -186,12 +184,10 @@ export default function SettingsPage() {
                   </div>
 
                   {theme.is_premium && !canUse && (
-                    <div className="mt-3 text-sm text-gray-500">
-                      🔒 Desbloqueie na loja
-                    </div>
+                    <div className="mt-3 text-sm text-gray-500">🔒 Desbloqueie na loja</div>
                   )}
                 </div>
-              );
+              )
             })}
           </div>
         </CardContent>
@@ -216,16 +212,12 @@ export default function SettingsPage() {
             <button
               onClick={handleToggleNotifications}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                preferences?.notifications_enabled
-                  ? 'bg-mario-green'
-                  : 'bg-gray-300'
+                preferences?.notifications_enabled ? 'bg-mario-green' : 'bg-gray-300'
               }`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  preferences?.notifications_enabled
-                    ? 'translate-x-6'
-                    : 'translate-x-1'
+                  preferences?.notifications_enabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
@@ -233,9 +225,7 @@ export default function SettingsPage() {
 
           {preferences?.notifications_enabled && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
-                ⏰ Horário: {preferences.notification_time}
-              </p>
+              <p className="text-sm text-gray-600">⏰ Horário: {preferences.notification_time}</p>
               <p className="text-sm text-gray-500 mt-1">
                 Configure horários personalizados em breve!
               </p>
@@ -257,9 +247,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold mb-1">Sons</h3>
-                <p className="text-sm text-text-secondary">
-                  Efeitos sonoros e música
-                </p>
+                <p className="text-sm text-text-secondary">Efeitos sonoros e música</p>
               </div>
               <button
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -268,9 +256,7 @@ export default function SettingsPage() {
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    preferences?.sound_enabled
-                      ? 'translate-x-6'
-                      : 'translate-x-1'
+                    preferences?.sound_enabled ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -279,14 +265,12 @@ export default function SettingsPage() {
             <div className="pt-4 border-t">
               <h3 className="font-semibold mb-1">Idioma</h3>
               <p className="text-sm text-text-secondary mb-2">
-                {preferences?.language === 'pt-BR'
-                  ? 'Português (Brasil)'
-                  : 'Português'}
+                {preferences?.language === 'pt-BR' ? 'Português (Brasil)' : 'Português'}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

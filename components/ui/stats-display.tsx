@@ -1,19 +1,19 @@
-'use client';
+'use client'
 
-import { Progress } from '@/components/ui/progress';
-import { CoinIcon } from '@/components/ui/coin-icon';
-import { getXPProgress } from '@/lib/utils';
-import { Zap } from 'lucide-react';
+import { Zap } from 'lucide-react'
+import { CoinIcon } from '@/components/ui/coin-icon'
+import { Progress } from '@/components/ui/progress'
+import { getXPProgress } from '@/lib/utils'
 
 interface StatsDisplayProps {
-  level: number;
-  xp: number;
-  coins: number;
-  variant?: 'compact' | 'full';
+  level: number
+  xp: number
+  coins: number
+  variant?: 'compact' | 'full'
 }
 
 export function StatsDisplay({ level, xp, coins, variant = 'compact' }: StatsDisplayProps) {
-  const { current, total, percentage } = getXPProgress(xp);
+  const { current, total, percentage } = getXPProgress(xp)
 
   if (variant === 'compact') {
     return (
@@ -31,7 +31,7 @@ export function StatsDisplay({ level, xp, coins, variant = 'compact' }: StatsDis
           <span className="font-medium text-sm">{coins}</span>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -68,5 +68,5 @@ export function StatsDisplay({ level, xp, coins, variant = 'compact' }: StatsDis
         </div>
       </div>
     </div>
-  );
+  )
 }
