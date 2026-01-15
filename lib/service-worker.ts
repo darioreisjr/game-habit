@@ -44,9 +44,9 @@ export async function queueCheckinForSync(checkinData: any) {
     await addPendingCheckin(db, checkinData);
 
     // Request background sync if available
-    if ('sync' in registration) {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
       const registration = await navigator.serviceWorker.ready;
-      await registration.sync.register('sync-checkins');
+      await (registration as any).sync.register('sync-checkins');
     }
   } catch (error) {
     console.error('Failed to queue checkin:', error);
