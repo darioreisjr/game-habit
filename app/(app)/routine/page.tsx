@@ -1,0 +1,210 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { format, startOfWeek, addDays, isSameDay, subWeeks, addWeeks, startOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { Habit, Checkin, Area } from '@/types/database.types';
+
+export default function RoutinePage() {
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([]);
+  const [checkins, setCheckins] = useState<Checkin[]>([]);
+
+  useEffect(() => {
+    loadData();
+  }, [currentWeek]);
+
+  const loadData = async () => {
+    const supabase = createClient();
+
+    const { data: habitsData } = await supabase
+      .from('habits')
+      .select('*, area:areas(*)')
+      .eq('is_archived', false)
+      .order('created_at');
+
+    if (habitsData) setHabits(habitsData as any);
+
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
+    const weekEnd = addDays(weekStart, 6);
+
+    const { data: checkinsData } = await supabase
+      .from('checkins')
+      .select('*')
+      .gte('date', format(weekStart, 'yyyy-MM-dd'))
+      .lte('date', format(weekEnd, 'yyyy-MM-dd'));
+
+    if (checkinsData) setCheckins(checkinsData);
+  };
+
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const getCheckinsForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return checkins.filter((c) => c.date === dateStr);
+  };
+
+  const isHabitCompletedOnDate = (habitId: string, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return checkins.some((c) => c.habit_id === habitId && c.date === dateStr);
+  };
+
+  const getStreakForHabit = (habitId: string) => {
+    let streak = 0;
+    let currentDate = startOfDay(new Date());
+
+    while (true) {
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      const hasCheckin = checkins.some((c) => c.habit_id === habitId && c.date === dateStr);
+
+      if (!hasCheckin) break;
+
+      streak++;
+      currentDate = addDays(currentDate, -1);
+    }
+
+    return streak;
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
+      <div>
+        <h1 className="text-3xl md:text-4xl font-display font-bold">Rotina</h1>
+        <p className="text-text-secondary mt-1">Acompanhe seu progresso semanal</p>
+      </div>
+
+      {/* Week Navigator */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            className="p-2 hover:bg-background-light rounded-lg transition-colors"
+          >
+            <ChevronLeft size={24} />
+          </button>
+
+          <div className="text-center">
+            <div className="font-display font-semibold text-lg">
+              {format(weekStart, 'MMMM yyyy', { locale: ptBR })}
+            </div>
+            <div className="text-sm text-text-secondary">
+              {format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 6), 'dd/MM')}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            className="p-2 hover:bg-background-light rounded-lg transition-colors"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-2">
+          {weekDays.map((day) => {
+            const dayCheckins = getCheckinsForDate(day);
+            const isToday = isSameDay(day, new Date());
+            const completionRate =
+              habits.length > 0 ? (dayCheckins.length / habits.length) * 100 : 0;
+
+            return (
+              <div
+                key={day.toISOString()}
+                className={`p-3 rounded-xl text-center transition-all ${
+                  isToday
+                    ? 'bg-mario-red/10 border-2 border-mario-red'
+                    : 'bg-background-light border-2 border-transparent'
+                }`}
+              >
+                <div className="text-xs text-text-secondary font-medium mb-1">
+                  {format(day, 'EEE', { locale: ptBR })}
+                </div>
+                <div className={`text-lg font-bold mb-2 ${isToday ? 'text-mario-red' : ''}`}>
+                  {format(day, 'd')}
+                </div>
+                <div className="text-xs">
+                  <div className="text-text-secondary mb-1">
+                    {dayCheckins.length}/{habits.length}
+                  </div>
+                  <div className="h-1.5 bg-white rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-mario-green transition-all"
+                      style={{ width: `${completionRate}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Habits Grid */}
+      <div className="space-y-3">
+        <h2 className="text-xl font-display font-semibold">Hábitos da Semana</h2>
+
+        {habits.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-text-secondary">Você ainda não tem hábitos configurados.</p>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {habits.map((habit) => {
+              const streak = getStreakForHabit(habit.id);
+
+              return (
+                <Card key={habit.id} className="p-4">
+                  <div className="flex items-start gap-4 mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-1">{habit.name}</h3>
+                      <div className="flex items-center gap-2">
+                        {habit.area && (
+                          <Badge variant="secondary">
+                            {habit.area.icon} {habit.area.name}
+                          </Badge>
+                        )}
+                        {streak > 0 && (
+                          <Badge variant="warning">
+                            🔥 {streak} {streak === 1 ? 'dia' : 'dias'}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-2">
+                    {weekDays.map((day) => {
+                      const isCompleted = isHabitCompletedOnDate(habit.id, day);
+                      const isToday = isSameDay(day, new Date());
+
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all ${
+                            isCompleted
+                              ? 'bg-mario-green text-white'
+                              : isToday
+                              ? 'bg-background-light border-2 border-mario-red'
+                              : 'bg-background-light'
+                          }`}
+                        >
+                          {isCompleted ? '✓' : format(day, 'd')}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

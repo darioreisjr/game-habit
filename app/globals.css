@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Press+Start+2P&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-mario-red: #E52521;
+  --color-mario-blue: #1E5BD8;
+  --color-mario-yellow: #F7C600;
+  --color-mario-green: #23C55E;
+
+  --color-background-light: #F7F7F8;
+  --color-background-dark: #0F1115;
+
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+
+  --color-border: #E5E7EB;
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-pixel: 'Press Start 2P', monospace;
+
+  /* Border Radius */
+  --radius-card: 16px;
+
+  /* Transitions */
+  --duration-quick: 120ms;
+  --duration-standard: 180ms;
+}
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-space-grotesk: 'Space Grotesk', sans-serif;
+  --font-press-start: 'Press Start 2P', monospace;
+}
+
+body {
+  background-color: var(--color-background-light);
+  color: var(--color-text-primary);
+  font-family: var(--font-inter);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
