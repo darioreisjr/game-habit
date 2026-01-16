@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { ShopItem, Stats } from '@/types/database.types'
+import type { InventoryItem, ShopItem, Stats } from '@/types/database.types'
 import { ShopItemCard } from './shop-item-card'
 
 type ShopCategory = 'all' | 'powerup' | 'theme' | 'boost' | 'cosmetic'
@@ -10,14 +10,11 @@ type ShopCategory = 'all' | 'powerup' | 'theme' | 'boost' | 'cosmetic'
 export function ShopList() {
   const [items, setItems] = useState<ShopItem[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<ShopCategory>('all')
 
-  useEffect(() => {
-    loadShopData()
-  }, [loadShopData])
-
-  async function loadShopData() {
+  const loadShopData = useCallback(async () => {
     try {
       const supabase = createClient()
       const {
@@ -44,14 +41,25 @@ export function ShopList() {
 
       if (statsError) throw statsError
 
+      // Load user inventory (for checking owned items)
+      const { data: inventoryData } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('user_id', user.id)
+
       setItems(itemsData || [])
       setStats(statsData)
+      setInventory(inventoryData || [])
     } catch (error) {
       console.error('Error loading shop data:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadShopData()
+  }, [loadShopData])
 
   const filteredItems =
     selectedCategory === 'all' ? items : items.filter((item) => item.category === selectedCategory)
@@ -120,6 +128,7 @@ export function ShopList() {
               key={item.id}
               item={item}
               userCoins={stats?.coins || 0}
+              isOwned={inventory.some((inv) => inv.item_key === item.item_key)}
               onPurchase={loadShopData}
             />
           ))}
