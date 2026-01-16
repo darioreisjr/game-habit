@@ -18,22 +18,25 @@ export default function AreasPage() {
   const loadData = async () => {
     const supabase = createClient()
 
-    // Carregar áreas
-    const { data: areasData } = await supabase.from('areas').select('*').order('order_index')
+    // Otimização: Promise.all para queries paralelas + contagem agregada
+    // Antes: N+1 queries (1 para áreas + N para contar hábitos de cada área)
+    // Agora: 2 queries apenas
+    const [areasResult, habitsResult] = await Promise.all([
+      supabase.from('areas').select('*').order('order_index'),
+      supabase.from('habits').select('area_id').eq('is_archived', false),
+    ])
 
-    if (areasData) {
-      setAreas(areasData)
+    if (areasResult.data) {
+      setAreas(areasResult.data)
 
-      // Contar hábitos por área
+      // Contar hábitos por área em memória (O(n) ao invés de N queries)
       const counts: Record<string, number> = {}
-      for (const area of areasData) {
-        const { count } = await supabase
-          .from('habits')
-          .select('*', { count: 'exact', head: true })
-          .eq('area_id', area.id)
-          .eq('is_archived', false)
-
-        counts[area.id] = count || 0
+      if (habitsResult.data) {
+        for (const habit of habitsResult.data) {
+          if (habit.area_id) {
+            counts[habit.area_id] = (counts[habit.area_id] || 0) + 1
+          }
+        }
       }
       setHabitCounts(counts)
     }

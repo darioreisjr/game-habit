@@ -5,72 +5,54 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function StatsPage() {
-  const supabase = createClient()
   const [dashboard, setDashboard] = useState<any>(null)
   const [insights, setInsights] = useState<any[]>([])
   const [goals, setGoals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadDashboard()
-    loadInsights()
-    loadGoals()
-  }, [loadDashboard, loadGoals, loadInsights])
+    const loadAllData = async () => {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
 
-  async function loadDashboard() {
-    try {
-      const { data, error } = await supabase.rpc('get_user_dashboard')
-      if (error) throw error
-      setDashboard(data)
-    } catch (error) {
-      console.error('Error loading dashboard:', error)
-    } finally {
-      setLoading(false)
+        if (!user) {
+          setLoading(false)
+          return
+        }
+
+        // Otimização: Promise.all para queries paralelas (antes eram 3 queries sequenciais)
+        const [dashboardResult, insightsResult, goalsResult] = await Promise.all([
+          supabase.rpc('get_user_dashboard'),
+          supabase
+            .from('user_insights')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_dismissed', false)
+            .order('priority', { ascending: false })
+            .limit(5),
+          supabase
+            .from('personal_goals')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_completed', false)
+            .order('created_at', { ascending: false }),
+        ])
+
+        if (dashboardResult.data) setDashboard(dashboardResult.data)
+        if (insightsResult.data) setInsights(insightsResult.data)
+        if (goalsResult.data) setGoals(goalsResult.data)
+      } catch (error) {
+        console.error('Error loading stats data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
-  async function loadInsights() {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('user_insights')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_dismissed', false)
-        .order('priority', { ascending: false })
-        .limit(5)
-
-      if (error) throw error
-      setInsights(data || [])
-    } catch (error) {
-      console.error('Error loading insights:', error)
-    }
-  }
-
-  async function loadGoals() {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('personal_goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_completed', false)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setGoals(data || [])
-    } catch (error) {
-      console.error('Error loading goals:', error)
-    }
-  }
+    loadAllData()
+  }, [])
 
   function getInsightIcon(type: string) {
     switch (type) {
