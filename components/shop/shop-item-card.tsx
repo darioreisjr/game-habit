@@ -10,6 +10,7 @@ import type { ShopItem } from '@/types/database.types'
 interface ShopItemCardProps {
   item: ShopItem
   userCoins: number
+  isOwned?: boolean
   onPurchase: () => void
 }
 
@@ -27,9 +28,10 @@ const categoryLabels: Record<string, string> = {
   cosmetic: 'Cosmético',
 }
 
-export function ShopItemCard({ item, userCoins, onPurchase }: ShopItemCardProps) {
+export function ShopItemCard({ item, userCoins, isOwned = false, onPurchase }: ShopItemCardProps) {
   const [purchasing, setPurchasing] = useState(false)
   const canAfford = userCoins >= item.price
+  const isTheme = item.category === 'theme'
 
   async function handlePurchase() {
     if (!canAfford || purchasing) return
@@ -106,15 +108,21 @@ export function ShopItemCard({ item, userCoins, onPurchase }: ShopItemCardProps)
             <span className="text-2xl font-bold text-mario-yellow">{item.price}</span>
           </div>
 
-          <Button
-            onClick={handlePurchase}
-            disabled={!canAfford || purchasing}
-            className={`${
-              canAfford ? 'bg-mario-red hover:bg-red-600' : 'bg-gray-300 cursor-not-allowed'
-            }`}
-          >
-            {purchasing ? 'Comprando...' : canAfford ? 'Comprar' : 'Sem moedas'}
-          </Button>
+          {isTheme && isOwned ? (
+            <Button disabled className="bg-mario-green cursor-default">
+              ✓ Adquirido
+            </Button>
+          ) : (
+            <Button
+              onClick={handlePurchase}
+              disabled={!canAfford || purchasing}
+              className={`${
+                canAfford ? 'bg-mario-red hover:bg-red-600' : 'bg-gray-300 cursor-not-allowed'
+              }`}
+            >
+              {purchasing ? 'Comprando...' : canAfford ? 'Comprar' : 'Sem moedas'}
+            </Button>
+          )}
         </div>
       </div>
     </Card>
