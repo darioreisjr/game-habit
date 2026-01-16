@@ -76,7 +76,7 @@ export function ShopItemCard({ item, userCoins, isOwned = false, onPurchase }: S
 
         <h3 className="font-display text-xl font-bold text-gray-900 mb-2">{item.name}</h3>
 
-        <p className="text-sm text-gray-600 mb-4 min-h-[40px]">{item.description}</p>
+        <p className="text-sm text-gray-600 mb-4 min-h-10">{item.description}</p>
 
         {item.effect_type && item.effect_value && (
           <div className="bg-gray-50 rounded-lg px-3 py-2 mb-4 w-full">

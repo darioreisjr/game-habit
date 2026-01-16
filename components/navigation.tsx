@@ -50,7 +50,7 @@ export function Navigation() {
                 key={href}
                 href={href}
                 className={cn(
-                  'flex flex-col items-center justify-center min-w-[80px] h-full transition-colors relative',
+                  'flex flex-col items-center justify-center min-w-20 h-full transition-colors relative',
                   isActive ? 'text-mario-red' : 'text-text-secondary'
                 )}
               >

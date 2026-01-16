@@ -88,7 +88,7 @@ export function ShopList() {
   return (
     <div className="space-y-6">
       {/* User Coins Display */}
-      <div className="bg-gradient-to-r from-mario-yellow to-yellow-400 rounded-2xl p-6 text-center">
+      <div className="bg-linear-to-r from-mario-yellow to-yellow-400 rounded-2xl p-6 text-center">
         <div className="text-6xl mb-2">💰</div>
         <div className="text-4xl font-bold text-gray-900">{stats?.coins || 0}</div>
         <div className="text-sm text-gray-700 mt-1">Suas moedas</div>
