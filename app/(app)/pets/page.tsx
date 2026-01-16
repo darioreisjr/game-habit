@@ -2,6 +2,7 @@
 
 import { Battery, Heart, Play, Sparkles, Star, UtensilsCrossed } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { PetType, UserPet } from '@/types/database.types'
 
@@ -92,13 +93,13 @@ export default function PetsPage() {
 
       if (error) throw error
       if (data?.success) {
-        alert(`${interaction} realizado com sucesso!`)
+        toast.success(`${interaction} realizado com sucesso!`)
         loadUserPets()
       } else {
-        alert(data?.message || 'Erro na interação')
+        toast.error(data?.message || 'Erro na interação')
       }
     } catch (error: any) {
-      alert(`Erro: ${error.message}`)
+      toast.error(`Erro: ${error.message}`)
     }
   }
 
@@ -121,7 +122,7 @@ export default function PetsPage() {
         .single()
 
       if (stats && stats.coins < petType.price) {
-        alert('Moedas insuficientes!')
+        toast.warning('Moedas insuficientes!')
         return
       }
 
@@ -142,11 +143,11 @@ export default function PetsPage() {
           .eq('user_id', user.id)
       }
 
-      alert('Pet adotado com sucesso! 🎉')
+      toast.success('Pet adotado com sucesso! 🎉')
       loadUserPets()
       setTab('my-pets')
     } catch (error: any) {
-      alert(`Erro ao adotar pet: ${error.message}`)
+      toast.error(`Erro ao adotar pet: ${error.message}`)
     }
   }
 

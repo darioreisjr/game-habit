@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { Inter, Press_Start_2P, Space_Grotesk } from 'next/font/google'
+import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
 // Fontes otimizadas com next/font (preload automático, sem render blocking)
@@ -40,6 +41,7 @@ export default function RootLayout({
     >
       <body className={inter.className}>
         {children}
+        <Toaster />
         <Analytics />
       </body>
     </html>

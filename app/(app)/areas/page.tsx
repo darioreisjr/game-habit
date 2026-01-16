@@ -2,6 +2,7 @@
 
 import { Edit2, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { AreaForm } from '@/components/areas/area-form'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,8 +51,8 @@ export default function AreasPage() {
     const habitCount = habitCounts[areaId] || 0
 
     if (habitCount > 0) {
-      alert(
-        `Esta área possui ${habitCount} hábito(s) vinculado(s). Por favor, remova ou mova os hábitos antes de excluir a área.`
+      toast.warning(
+        `Esta área possui ${habitCount} hábito(s) vinculado(s). Remova ou mova os hábitos antes de excluir.`
       )
       return
     }

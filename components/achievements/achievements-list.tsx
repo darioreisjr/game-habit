@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { Achievement, UserAchievement } from '@/types/database.types'
 import { AchievementCard } from './achievement-card'
@@ -71,11 +72,11 @@ export function AchievementsList() {
 
         // Copy to clipboard
         await navigator.clipboard.writeText(shareUrl)
-        alert('Link copiado! Compartilhe sua conquista com os amigos.')
+        toast.success('Link copiado! Compartilhe sua conquista com os amigos.')
       }
     } catch (error) {
       console.error('Error sharing achievement:', error)
-      alert('Erro ao compartilhar conquista. Tente novamente.')
+      toast.error('Erro ao compartilhar conquista. Tente novamente.')
     }
   }
 
