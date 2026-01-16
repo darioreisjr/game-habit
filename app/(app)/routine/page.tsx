@@ -3,7 +3,7 @@
 import { addDays, addWeeks, format, isSameDay, startOfDay, startOfWeek, subWeeks } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
@@ -14,62 +14,88 @@ export default function RoutinePage() {
   const [habits, setHabits] = useState<(Habit & { area?: Area })[]>([])
   const [checkins, setCheckins] = useState<Checkin[]>([])
 
-  const loadData = async () => {
-    const supabase = createClient()
-
-    const { data: habitsData } = await supabase
-      .from('habits')
-      .select('*, area:areas(*)')
-      .eq('is_archived', false)
-      .order('created_at')
-
-    if (habitsData) setHabits(habitsData as any)
-
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 })
-    const weekEnd = addDays(weekStart, 6)
-
-    const { data: checkinsData } = await supabase
-      .from('checkins')
-      .select('*')
-      .gte('date', format(weekStart, 'yyyy-MM-dd'))
-      .lte('date', format(weekEnd, 'yyyy-MM-dd'))
-
-    if (checkinsData) setCheckins(checkinsData)
-  }
-
   useEffect(() => {
+    const loadData = async () => {
+      const supabase = createClient()
+      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 })
+      const weekEnd = addDays(weekStart, 6)
+
+      // Otimização: Promise.all para queries paralelas
+      const [habitsResult, checkinsResult] = await Promise.all([
+        supabase
+          .from('habits')
+          .select('*, area:areas(*)')
+          .eq('is_archived', false)
+          .order('created_at'),
+        supabase
+          .from('checkins')
+          .select('*')
+          .gte('date', format(weekStart, 'yyyy-MM-dd'))
+          .lte('date', format(weekEnd, 'yyyy-MM-dd')),
+      ])
+
+      if (habitsResult.data) setHabits(habitsResult.data as any)
+      if (checkinsResult.data) setCheckins(checkinsResult.data)
+    }
+
     loadData()
   }, [currentWeek])
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  // Otimização: useMemo para weekStart e weekDays (evita recálculo a cada render)
+  const weekStart = useMemo(() => startOfWeek(currentWeek, { weekStartsOn: 0 }), [currentWeek])
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  )
+
+  // Otimização: índice de checkins por data para lookup O(1)
+  const checkinsByDate = useMemo(() => {
+    const map = new Map<string, Checkin[]>()
+    for (const checkin of checkins) {
+      const existing = map.get(checkin.date) || []
+      existing.push(checkin)
+      map.set(checkin.date, existing)
+    }
+    return map
+  }, [checkins])
+
+  // Otimização: Set de checkins por habitId-date para lookup O(1)
+  const checkinKeys = useMemo(
+    () => new Set(checkins.map((c) => `${c.habit_id}-${c.date}`)),
+    [checkins]
+  )
 
   const getCheckinsForDate = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd')
-    return checkins.filter((c) => c.date === dateStr)
+    return checkinsByDate.get(dateStr) || []
   }
 
   const isHabitCompletedOnDate = (habitId: string, date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd')
-    return checkins.some((c) => c.habit_id === habitId && c.date === dateStr)
+    return checkinKeys.has(`${habitId}-${dateStr}`)
   }
 
-  const getStreakForHabit = (habitId: string) => {
-    let streak = 0
-    let currentDate = startOfDay(new Date())
+  // Otimização: pré-calcular streaks para todos os hábitos de uma vez
+  const streaksByHabit = useMemo(() => {
+    const streaks = new Map<string, number>()
 
-    while (true) {
-      const dateStr = format(currentDate, 'yyyy-MM-dd')
-      const hasCheckin = checkins.some((c) => c.habit_id === habitId && c.date === dateStr)
+    for (const habit of habits) {
+      let streak = 0
+      let currentDate = startOfDay(new Date())
 
-      if (!hasCheckin) break
+      while (streak < 365) {
+        // Limite de segurança para evitar loop infinito
+        const dateStr = format(currentDate, 'yyyy-MM-dd')
+        if (!checkinKeys.has(`${habit.id}-${dateStr}`)) break
+        streak++
+        currentDate = addDays(currentDate, -1)
+      }
 
-      streak++
-      currentDate = addDays(currentDate, -1)
+      streaks.set(habit.id, streak)
     }
 
-    return streak
-  }
+    return streaks
+  }, [habits, checkinKeys])
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
@@ -156,7 +182,7 @@ export default function RoutinePage() {
         ) : (
           <div className="space-y-2">
             {habits.map((habit) => {
-              const streak = getStreakForHabit(habit.id)
+              const streak = streaksByHabit.get(habit.id) || 0
 
               return (
                 <Card key={habit.id} className="p-4">

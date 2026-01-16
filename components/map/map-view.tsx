@@ -2,7 +2,7 @@
 
 import { Check, Flag, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -23,14 +23,22 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
   const [completingHabit, setCompletingHabit] = useState<string | null>(null)
   const [localCheckins, setLocalCheckins] = useState(checkins)
 
-  useEffect(() => {
-    setLocalCheckins(checkins)
-  }, [checkins])
-
-  const completedHabitIds = new Set(localCheckins.map((c) => c.habit_id))
+  // Otimização: useMemo para evitar recálculos desnecessários
+  const completedHabitIds = useMemo(
+    () => new Set(localCheckins.map((c) => c.habit_id)),
+    [localCheckins]
+  )
   const completedCount = completedHabitIds.size
   const totalCount = habits.length
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+
+  // Otimização: greeting calculado apenas uma vez (não muda durante a sessão)
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Bom dia'
+    if (hour < 18) return 'Boa tarde'
+    return 'Boa noite'
+  }, [])
 
   const handleCompleteHabit = async (habitId: string, _difficulty: string) => {
     setCompletingHabit(habitId)
@@ -75,14 +83,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
     }
 
     setCompletingHabit(null)
-    router.refresh()
-  }
-
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Bom dia'
-    if (hour < 18) return 'Boa tarde'
-    return 'Boa noite'
+    // Removido router.refresh() - atualização otimista já atualiza o estado local
   }
 
   return (
@@ -91,7 +92,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
       <div className="space-y-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-display font-bold">
-            {getGreeting()}, {profile.name}!
+            {greeting}, {profile.name}!
           </h1>
           <p className="text-text-secondary mt-1">Mundo 1-1: Hoje</p>
         </div>

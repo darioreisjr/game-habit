@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Achievement, UserAchievement } from '@/types/database.types'
 import { AchievementCard } from './achievement-card'
@@ -13,46 +13,42 @@ export function AchievementsList() {
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory>('all')
 
+  // Otimização: função dentro do useEffect para evitar dependência problemática
   useEffect(() => {
-    loadAchievements()
-  }, [loadAchievements])
+    async function loadAchievements() {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (!user) return
 
-  async function loadAchievements() {
-    try {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
+        // Otimização: Promise.all para queries paralelas
+        const [achievementsResult, userAchievementsResult] = await Promise.all([
+          supabase.from('achievements').select('*').order('rarity').order('xp_reward'),
+          supabase
+            .from('user_achievements')
+            .select('*, achievement:achievements(*)')
+            .eq('user_id', user.id),
+        ])
 
-      // Load all achievements
-      const { data: achievementsData, error: achievementsError } = await supabase
-        .from('achievements')
-        .select('*')
-        .order('rarity')
-        .order('xp_reward')
+        if (achievementsResult.error) throw achievementsResult.error
+        if (userAchievementsResult.error) throw userAchievementsResult.error
 
-      if (achievementsError) throw achievementsError
+        setAchievements(achievementsResult.data || [])
+        setUserAchievements(userAchievementsResult.data || [])
 
-      // Load user's unlocked achievements
-      const { data: userAchievementsData, error: userAchievementsError } = await supabase
-        .from('user_achievements')
-        .select('*, achievement:achievements(*)')
-        .eq('user_id', user.id)
-
-      if (userAchievementsError) throw userAchievementsError
-
-      setAchievements(achievementsData || [])
-      setUserAchievements(userAchievementsData || [])
-
-      // Check for new achievements
-      await supabase.rpc('check_achievements', { p_user_id: user.id })
-    } catch (error) {
-      console.error('Error loading achievements:', error)
-    } finally {
-      setLoading(false)
+        // Check for new achievements (em background, não bloqueia UI)
+        supabase.rpc('check_achievements', { p_user_id: user.id })
+      } catch (error) {
+        console.error('Error loading achievements:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+
+    loadAchievements()
+  }, [])
 
   async function handleShare(userAchievementId: string) {
     try {
@@ -83,10 +79,20 @@ export function AchievementsList() {
     }
   }
 
-  const filteredAchievements =
-    selectedCategory === 'all'
-      ? achievements
-      : achievements.filter((a) => a.category === selectedCategory)
+  // Otimização: useMemo para evitar recálculo a cada render
+  const filteredAchievements = useMemo(
+    () =>
+      selectedCategory === 'all'
+        ? achievements
+        : achievements.filter((a) => a.category === selectedCategory),
+    [achievements, selectedCategory]
+  )
+
+  // Otimização: Map para lookup O(1) ao invés de .find() O(n) para cada achievement
+  const userAchievementsMap = useMemo(
+    () => new Map(userAchievements.map((ua) => [ua.achievement_id, ua])),
+    [userAchievements]
+  )
 
   const categories: { value: AchievementCategory; label: string; emoji: string }[] = [
     { value: 'all', label: 'Todas', emoji: '🏆' },
@@ -153,20 +159,14 @@ export function AchievementsList() {
 
       {/* Achievements List */}
       <div className="space-y-4">
-        {filteredAchievements.map((achievement) => {
-          const userAchievement = userAchievements.find(
-            (ua) => ua.achievement_id === achievement.id
-          )
-
-          return (
-            <AchievementCard
-              key={achievement.id}
-              achievement={achievement}
-              userAchievement={userAchievement}
-              onShare={handleShare}
-            />
-          )
-        })}
+        {filteredAchievements.map((achievement) => (
+          <AchievementCard
+            key={achievement.id}
+            achievement={achievement}
+            userAchievement={userAchievementsMap.get(achievement.id)}
+            onShare={handleShare}
+          />
+        ))}
       </div>
 
       {filteredAchievements.length === 0 && (

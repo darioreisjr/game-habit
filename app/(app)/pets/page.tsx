@@ -6,19 +6,15 @@ import { createClient } from '@/lib/supabase/client'
 import type { PetType, UserPet } from '@/types/database.types'
 
 export default function PetsPage() {
-  const supabase = createClient()
   const [pets, setPets] = useState<UserPet[]>([])
   const [activePet, setActivePet] = useState<UserPet | null>(null)
   const [availablePets, setAvailablePets] = useState<PetType[]>([])
   const [_loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'my-pets' | 'adopt'>('my-pets')
 
-  useEffect(() => {
-    loadUserPets()
-    loadAvailablePets()
-  }, [loadAvailablePets, loadUserPets])
-
-  async function loadUserPets() {
+  // Otimização: função de load usada em vários lugares
+  const loadUserPets = async () => {
+    const supabase = createClient()
     try {
       const {
         data: { user },
@@ -45,22 +41,48 @@ export default function PetsPage() {
     }
   }
 
-  async function loadAvailablePets() {
-    try {
-      const { data, error } = await supabase
-        .from('pet_types')
-        .select('*')
-        .order('rarity', { ascending: true })
+  // Otimização: useEffect com função interna e Promise.all
+  useEffect(() => {
+    async function loadAllData() {
+      const supabase = createClient()
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          return
+        }
 
-      if (error) throw error
-      setAvailablePets(data || [])
-    } catch (error) {
-      console.error('Error loading pet types:', error)
+        // Otimização: Promise.all para queries paralelas
+        const [petsResult, petTypesResult] = await Promise.all([
+          supabase
+            .from('user_pets')
+            .select(`*, pet_type:pet_type_id (*)`)
+            .eq('user_id', user.id)
+            .order('is_active', { ascending: false }),
+          supabase.from('pet_types').select('*').order('rarity', { ascending: true }),
+        ])
+
+        if (petsResult.data) {
+          setPets(petsResult.data)
+          const active = petsResult.data.find((p: any) => p.is_active)
+          if (active) setActivePet(active)
+        }
+        if (petTypesResult.data) setAvailablePets(petTypesResult.data)
+      } catch (error) {
+        console.error('Error loading pets data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+
+    loadAllData()
+  }, [])
 
   async function interactWithPet(interaction: string) {
     if (!activePet) return
+    const supabase = createClient()
 
     try {
       const { data, error } = await supabase.rpc('interact_with_pet', {
@@ -81,6 +103,7 @@ export default function PetsPage() {
   }
 
   async function adoptPet(petTypeId: string) {
+    const supabase = createClient()
     try {
       const {
         data: { user },

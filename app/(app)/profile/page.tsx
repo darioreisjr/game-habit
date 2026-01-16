@@ -2,7 +2,7 @@
 
 import { LogOut, Target, Trophy, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,7 +19,8 @@ export default function ProfilePage() {
   const [totalCheckins, setTotalCheckins] = useState(0)
   const [totalHabits, setTotalHabits] = useState(0)
 
-  const loadData = async () => {
+  // Otimização: useCallback para evitar recriação da função
+  const loadData = useCallback(async () => {
     const supabase = createClient()
 
     const {
@@ -28,44 +29,31 @@ export default function ProfilePage() {
 
     if (!user) return
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // Otimização: Promise.all para queries paralelas (antes eram 4 queries sequenciais)
+    const [profileResult, statsResult, checkinsResult, habitsResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('stats').select('*').eq('user_id', user.id).single(),
+      supabase.from('checkins').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase
+        .from('habits')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_archived', false),
+    ])
 
-    if (profileData) {
-      setProfile(profileData)
-      setName(profileData.name)
+    if (profileResult.data) {
+      setProfile(profileResult.data)
+      setName(profileResult.data.name)
     }
 
-    const { data: statsData } = await supabase
-      .from('stats')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (statsData) setStats(statsData)
-
-    const { count: checkinsCount } = await supabase
-      .from('checkins')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-
-    setTotalCheckins(checkinsCount || 0)
-
-    const { count: habitsCount } = await supabase
-      .from('habits')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_archived', false)
-
-    setTotalHabits(habitsCount || 0)
-  }
+    if (statsResult.data) setStats(statsResult.data)
+    setTotalCheckins(checkinsResult.count || 0)
+    setTotalHabits(habitsResult.count || 0)
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
