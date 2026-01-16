@@ -2,6 +2,7 @@
 
 import { MessageCircle, Search, Trophy, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { Friendship, PublicProfile } from '@/types/database.types'
 
@@ -117,10 +118,10 @@ export default function FriendsPage() {
       })
 
       if (error) throw error
-      alert('Solicitação de amizade enviada!')
+      toast.success('Solicitação de amizade enviada!')
       searchUsers() // Atualizar resultados
     } catch (error: any) {
-      alert(`Erro ao enviar solicitação: ${error.message}`)
+      toast.error(`Erro ao enviar solicitação: ${error.message}`)
     }
   }
 

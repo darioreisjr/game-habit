@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -53,13 +54,14 @@ export function ShopItemCard({ item, userCoins, isOwned = false, onPurchase }: S
       if (error) throw error
 
       if (data.success) {
+        toast.success('Item comprado com sucesso!')
         onPurchase()
       } else {
-        alert(data.error || 'Erro ao comprar item')
+        toast.error(data.error || 'Erro ao comprar item')
       }
     } catch (error) {
       console.error('Error purchasing item:', error)
-      alert('Erro ao comprar item. Tente novamente.')
+      toast.error('Erro ao comprar item. Tente novamente.')
     } finally {
       setPurchasing(false)
     }
