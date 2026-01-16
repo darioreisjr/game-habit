@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import type { Friendship, PublicProfile } from '@/types/database.types'
 
 export default function FriendsPage() {
-  const supabase = createClient()
   const [friends, setFriends] = useState<any[]>([])
   const [pendingRequests, setPendingRequests] = useState<Friendship[]>([])
   const [searchResults, setSearchResults] = useState<PublicProfile[]>([])
@@ -14,12 +13,9 @@ export default function FriendsPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends')
 
-  useEffect(() => {
-    loadFriends()
-    loadPendingRequests()
-  }, [loadFriends, loadPendingRequests])
-
-  async function loadFriends() {
+  // Funções de load reutilizáveis
+  const loadFriends = async () => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase.rpc('get_friends')
       if (error) throw error
@@ -31,7 +27,8 @@ export default function FriendsPage() {
     }
   }
 
-  async function loadPendingRequests() {
+  const loadPendingRequests = async () => {
+    const supabase = createClient()
     try {
       const {
         data: { user },
@@ -51,11 +48,48 @@ export default function FriendsPage() {
     }
   }
 
+  // Otimização: useEffect com Promise.all para queries paralelas
+  useEffect(() => {
+    async function loadAllData() {
+      const supabase = createClient()
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+          setLoading(false)
+          return
+        }
+
+        // Otimização: Promise.all para queries paralelas
+        const [friendsResult, requestsResult] = await Promise.all([
+          supabase.rpc('get_friends'),
+          supabase
+            .from('friendships')
+            .select('*')
+            .eq('addressee_id', user.id)
+            .eq('status', 'pending'),
+        ])
+
+        if (friendsResult.data) setFriends(friendsResult.data)
+        if (requestsResult.data) setPendingRequests(requestsResult.data)
+      } catch (error) {
+        console.error('Error loading friends data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAllData()
+  }, [])
+
   async function searchUsers() {
     if (!searchTerm.trim()) {
       setSearchResults([])
       return
     }
+    const supabase = createClient()
 
     try {
       const { data, error } = await supabase.rpc('search_users', {
@@ -69,6 +103,7 @@ export default function FriendsPage() {
   }
 
   async function sendFriendRequest(userId: string) {
+    const supabase = createClient()
     try {
       const {
         data: { user },
@@ -90,6 +125,7 @@ export default function FriendsPage() {
   }
 
   async function respondToRequest(requestId: string, accept: boolean) {
+    const supabase = createClient()
     try {
       const { error } = await supabase
         .from('friendships')

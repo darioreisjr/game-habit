@@ -22,23 +22,24 @@ export default function HabitsPage() {
   const loadData = async () => {
     const supabase = createClient()
 
-    const { data: areasData } = await supabase.from('areas').select('*').order('order_index')
-
-    if (areasData) setAreas(areasData)
-
-    let query = supabase
+    // Otimização: Promise.all para queries paralelas
+    let habitsQuery = supabase
       .from('habits')
       .select('*, area:areas(*)')
       .eq('is_archived', showArchived)
       .order('created_at', { ascending: false })
 
     if (selectedArea !== 'all') {
-      query = query.eq('area_id', selectedArea)
+      habitsQuery = habitsQuery.eq('area_id', selectedArea)
     }
 
-    const { data: habitsData } = await query
+    const [areasResult, habitsResult] = await Promise.all([
+      supabase.from('areas').select('*').order('order_index'),
+      habitsQuery,
+    ])
 
-    if (habitsData) setHabits(habitsData as any)
+    if (areasResult.data) setAreas(areasResult.data)
+    if (habitsResult.data) setHabits(habitsResult.data as any)
   }
 
   useEffect(() => {

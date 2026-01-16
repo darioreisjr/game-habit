@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { InventoryItem, ShopItem, Stats } from '@/types/database.types'
 import { ShopItemCard } from './shop-item-card'
@@ -14,7 +14,7 @@ export function ShopList() {
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<ShopCategory>('all')
 
-  const loadShopData = useCallback(async () => {
+  const loadShopData = async () => {
     try {
       const supabase = createClient()
       const {
@@ -22,47 +22,46 @@ export function ShopList() {
       } = await supabase.auth.getUser()
       if (!user) return
 
-      // Load shop items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('shop_items')
-        .select('*')
-        .eq('is_available', true)
-        .order('category')
-        .order('price')
+      // Otimização: Promise.all para queries paralelas (antes eram sequenciais)
+      const [itemsResult, statsResult, inventoryResult] = await Promise.all([
+        supabase
+          .from('shop_items')
+          .select('*')
+          .eq('is_available', true)
+          .order('category')
+          .order('price'),
+        supabase.from('stats').select('*').eq('user_id', user.id).single(),
+        supabase.from('inventory').select('*').eq('user_id', user.id),
+      ])
 
-      if (itemsError) throw itemsError
+      if (itemsResult.error) throw itemsResult.error
+      if (statsResult.error) throw statsResult.error
 
-      // Load user stats
-      const { data: statsData, error: statsError } = await supabase
-        .from('stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      if (statsError) throw statsError
-
-      // Load user inventory (for checking owned items)
-      const { data: inventoryData } = await supabase
-        .from('inventory')
-        .select('*')
-        .eq('user_id', user.id)
-
-      setItems(itemsData || [])
-      setStats(statsData)
-      setInventory(inventoryData || [])
+      setItems(itemsResult.data || [])
+      setStats(statsResult.data)
+      setInventory(inventoryResult.data || [])
     } catch (error) {
       console.error('Error loading shop data:', error)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadShopData()
-  }, [loadShopData])
+  }, [])
 
-  const filteredItems =
-    selectedCategory === 'all' ? items : items.filter((item) => item.category === selectedCategory)
+  // Otimização: useMemo para evitar recálculo a cada render
+  const filteredItems = useMemo(
+    () =>
+      selectedCategory === 'all'
+        ? items
+        : items.filter((item) => item.category === selectedCategory),
+    [items, selectedCategory]
+  )
+
+  // Otimização: Set para lookup O(1) ao invés de .some() O(n)
+  const ownedItemKeys = useMemo(() => new Set(inventory.map((inv) => inv.item_key)), [inventory])
 
   const categories: { value: ShopCategory; label: string; emoji: string }[] = [
     { value: 'all', label: 'Todos', emoji: '🎮' },
@@ -88,7 +87,7 @@ export function ShopList() {
   return (
     <div className="space-y-6">
       {/* User Coins Display */}
-      <div className="bg-gradient-to-r from-mario-yellow to-yellow-400 rounded-2xl p-6 text-center">
+      <div className="bg-linear-to-r from-mario-yellow to-yellow-400 rounded-2xl p-6 text-center">
         <div className="text-6xl mb-2">💰</div>
         <div className="text-4xl font-bold text-gray-900">{stats?.coins || 0}</div>
         <div className="text-sm text-gray-700 mt-1">Suas moedas</div>
@@ -128,7 +127,7 @@ export function ShopList() {
               key={item.id}
               item={item}
               userCoins={stats?.coins || 0}
-              isOwned={inventory.some((inv) => inv.item_key === item.item_key)}
+              isOwned={ownedItemKeys.has(item.item_key)}
               onPurchase={loadShopData}
             />
           ))}
