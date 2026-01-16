@@ -2,6 +2,7 @@
 
 import { Bell, Lock, Palette, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import type { InventoryItem, Theme, UserPreferences } from '@/types/database.types'
@@ -65,15 +66,15 @@ export default function SettingsPage() {
 
     if (error) {
       console.error('Error changing theme:', error)
-      alert('Erro ao mudar tema. Tente novamente.')
+      toast.error('Erro ao mudar tema. Tente novamente.')
       return
     }
 
     if (data.success) {
       loadData()
-      alert('Tema alterado com sucesso!')
+      toast.success('Tema alterado com sucesso!')
     } else {
-      alert(data.error || 'Você precisa desbloquear este tema na loja!')
+      toast.warning(data.error || 'Você precisa desbloquear este tema na loja!')
     }
   }
 

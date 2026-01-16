@@ -3,6 +3,7 @@
 import { LogOut, Target, Trophy, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -68,7 +69,7 @@ export default function ProfilePage() {
     if (user) {
       await supabase.from('profiles').update({ name }).eq('id', user.id)
 
-      alert('Perfil atualizado com sucesso!')
+      toast.success('Perfil atualizado com sucesso!')
       loadData()
     }
 

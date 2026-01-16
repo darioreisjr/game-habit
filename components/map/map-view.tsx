@@ -3,6 +3,7 @@
 import { Check, Flag, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -50,7 +51,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
     const today = new Date().toISOString().split('T')[0]
 
     if (!user) {
-      alert('Sessao expirada. Faça login novamente.')
+      toast.error('Sessão expirada. Faça login novamente.')
       setCompletingHabit(null)
       return
     }
@@ -78,7 +79,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
 
     if (error && error.code !== '23505') {
       console.error('Erro ao salvar checkin:', error)
-      alert(`Nao foi possivel salvar o checkin: ${error.message}`)
+      toast.error(`Não foi possível salvar o checkin: ${error.message}`)
       setLocalCheckins((prev) => prev.filter((c) => !(c.habit_id === habitId && c.date === today)))
     }
 
