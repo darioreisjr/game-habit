@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { StatsDisplay } from '@/components/ui/stats-display'
 import { createClient } from '@/lib/supabase/client'
-import { getXPForDifficulty } from '@/lib/utils'
+import { getLevelFromXP, getXPForDifficulty } from '@/lib/utils'
 import type { Checkin, Habit, Profile, Stats } from '@/types/database.types'
 
 interface MapViewProps {
@@ -23,6 +23,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
   const router = useRouter()
   const [completingHabit, setCompletingHabit] = useState<string | null>(null)
   const [localCheckins, setLocalCheckins] = useState(checkins)
+  const [localStats, setLocalStats] = useState(stats)
 
   // Otimização: useMemo para evitar recálculos desnecessários
   const completedHabitIds = useMemo(
@@ -41,7 +42,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
     return 'Boa noite'
   }, [])
 
-  const handleCompleteHabit = async (habitId: string, _difficulty: string) => {
+  const handleCompleteHabit = async (habitId: string, difficulty: string) => {
     setCompletingHabit(habitId)
 
     const supabase = createClient()
@@ -56,6 +57,13 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
       return
     }
 
+    // Verifica se já foi completado hoje
+    const alreadyCompleted = localCheckins.some((c) => c.habit_id === habitId && c.date === today)
+    if (alreadyCompleted) {
+      setCompletingHabit(null)
+      return
+    }
+
     const optimisticCheckin = {
       id: crypto.randomUUID(),
       habit_id: habitId,
@@ -64,11 +72,23 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
       created_at: new Date().toISOString(),
     }
 
-    setLocalCheckins((prev) => {
-      if (prev.some((c) => c.habit_id === habitId && c.date === today)) {
-        return prev
+    // Atualização otimista dos checkins
+    setLocalCheckins((prev) => [...prev, optimisticCheckin])
+
+    // Atualização otimista das stats (XP, level, coins)
+    const xpGain = getXPForDifficulty(difficulty as 'easy' | 'medium' | 'hard')
+    const previousStats = localStats
+    setLocalStats((prev) => {
+      const newXp = prev.xp + xpGain
+      const newLevel = getLevelFromXP(newXp)
+      // Coins: 1 coin a cada 50 XP (mesma lógica do banco)
+      const newCoins = prev.coins + Math.floor(newXp / 50) - Math.floor(prev.xp / 50)
+      return {
+        ...prev,
+        xp: newXp,
+        level: newLevel,
+        coins: newCoins,
       }
-      return [...prev, optimisticCheckin]
     })
 
     const { error } = await supabase.from('checkins').insert({
@@ -80,11 +100,12 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
     if (error && error.code !== '23505') {
       console.error('Erro ao salvar checkin:', error)
       toast.error(`Não foi possível salvar o checkin: ${error.message}`, { position: 'top-right' })
+      // Rollback das atualizações otimistas
       setLocalCheckins((prev) => prev.filter((c) => !(c.habit_id === habitId && c.date === today)))
+      setLocalStats(previousStats)
     }
 
     setCompletingHabit(null)
-    // Removido router.refresh() - atualização otimista já atualiza o estado local
   }
 
   return (
@@ -99,7 +120,12 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
             <p className="text-text-secondary mt-1">Mundo 1-1: Hoje</p>
           </div>
 
-          <StatsDisplay level={stats.level} xp={stats.xp} coins={stats.coins} variant="compact" />
+          <StatsDisplay
+            level={localStats.level}
+            xp={localStats.xp}
+            coins={localStats.coins}
+            variant="compact"
+          />
         </div>
 
         {/* Progress Banner */}
@@ -160,6 +186,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
                   >
                     <div className="p-4 flex items-center gap-4">
                       <button
+                        type="button"
                         onClick={() =>
                           !isCompleted && handleCompleteHabit(habit.id, habit.difficulty)
                         }
