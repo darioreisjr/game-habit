@@ -12,6 +12,7 @@ interface AchievementCardProps {
   achievement: Achievement
   userAchievement?: UserAchievement
   onShare?: (userAchievementId: string) => void
+  isNewlyUnlocked?: boolean
 }
 
 const rarityColors: Record<string, string> = {
@@ -28,7 +29,12 @@ const rarityLabels: Record<string, string> = {
   legendary: 'Lendária',
 }
 
-export function AchievementCard({ achievement, userAchievement, onShare }: AchievementCardProps) {
+export function AchievementCard({
+  achievement,
+  userAchievement,
+  onShare,
+  isNewlyUnlocked,
+}: AchievementCardProps) {
   const isUnlocked = !!userAchievement
   const unlockedTime = userAchievement
     ? formatDistanceToNow(new Date(userAchievement.unlocked_at), {
@@ -41,7 +47,7 @@ export function AchievementCard({ achievement, userAchievement, onShare }: Achie
     <Card
       className={`p-6 transition-all ${
         isUnlocked ? 'hover:shadow-lg' : 'opacity-50 grayscale hover:opacity-70'
-      }`}
+      } ${isNewlyUnlocked ? 'ring-2 ring-mario-yellow animate-pulse shadow-lg shadow-yellow-200' : ''}`}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">

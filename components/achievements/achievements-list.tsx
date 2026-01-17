@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { Achievement, UserAchievement } from '@/types/database.types'
@@ -13,16 +13,30 @@ export function AchievementsList() {
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory>('all')
+  const [newlyUnlocked, setNewlyUnlocked] = useState<Set<string>>(new Set())
 
-  // Otimização: função dentro do useEffect para evitar dependência problemática
+  // Função para buscar achievement completo
+  const fetchAchievementDetails = useCallback(async (achievementId: string) => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('achievements')
+      .select('*')
+      .eq('id', achievementId)
+      .single()
+    return data
+  }, [])
+
   useEffect(() => {
+    const supabase = createClient()
+    let userId: string | null = null
+
     async function loadAchievements() {
       try {
-        const supabase = createClient()
         const {
           data: { user },
         } = await supabase.auth.getUser()
         if (!user) return
+        userId = user.id
 
         // Otimização: Promise.all para queries paralelas
         const [achievementsResult, userAchievementsResult] = await Promise.all([
@@ -49,7 +63,73 @@ export function AchievementsList() {
     }
 
     loadAchievements()
-  }, [])
+
+    // Realtime subscription para novas conquistas
+    const channel = supabase
+      .channel('user-achievements-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_achievements',
+        },
+        async (payload) => {
+          // Verifica se é do usuário atual
+          if (payload.new.user_id !== userId) return
+
+          const newUserAchievement = payload.new as UserAchievement
+
+          // Busca detalhes da conquista
+          const achievementDetails = await fetchAchievementDetails(
+            newUserAchievement.achievement_id
+          )
+
+          if (achievementDetails) {
+            // Adiciona a nova conquista ao estado
+            setUserAchievements((prev) => {
+              // Evita duplicatas
+              if (prev.some((ua) => ua.achievement_id === newUserAchievement.achievement_id)) {
+                return prev
+              }
+              return [...prev, { ...newUserAchievement, achievement: achievementDetails }]
+            })
+
+            // Marca como recém desbloqueada para animação
+            setNewlyUnlocked((prev) => new Set(prev).add(newUserAchievement.achievement_id))
+
+            // Remove a marcação após 5 segundos
+            setTimeout(() => {
+              setNewlyUnlocked((prev) => {
+                const next = new Set(prev)
+                next.delete(newUserAchievement.achievement_id)
+                return next
+              })
+            }, 5000)
+
+            // Mostra toast de conquista desbloqueada
+            toast.success(
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{achievementDetails.icon}</span>
+                <div>
+                  <div className="font-bold">Conquista Desbloqueada!</div>
+                  <div className="text-sm">{achievementDetails.name}</div>
+                  <div className="text-xs text-gray-500">
+                    +{achievementDetails.xp_reward} XP | +{achievementDetails.coin_reward} moedas
+                  </div>
+                </div>
+              </div>,
+              { duration: 5000 }
+            )
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchAchievementDetails])
 
   async function handleShare(userAchievementId: string) {
     try {
@@ -144,6 +224,7 @@ export function AchievementsList() {
       <div className="flex gap-2 overflow-x-auto pb-2">
         {categories.map((category) => (
           <button
+            type="button"
             key={category.value}
             onClick={() => setSelectedCategory(category.value)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all whitespace-nowrap ${
@@ -166,6 +247,7 @@ export function AchievementsList() {
             achievement={achievement}
             userAchievement={userAchievementsMap.get(achievement.id)}
             onShare={handleShare}
+            isNewlyUnlocked={newlyUnlocked.has(achievement.id)}
           />
         ))}
       </div>
