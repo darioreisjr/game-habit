@@ -10,9 +10,16 @@ interface StatsDisplayProps {
   xp: number
   coins: number
   variant?: 'compact' | 'full'
+  hideCoins?: boolean
 }
 
-export function StatsDisplay({ level, xp, coins, variant = 'compact' }: StatsDisplayProps) {
+export function StatsDisplay({
+  level,
+  xp,
+  coins,
+  variant = 'compact',
+  hideCoins = false,
+}: StatsDisplayProps) {
   const { current, total, percentage } = getXPProgress(xp)
 
   if (variant === 'compact') {
@@ -26,10 +33,12 @@ export function StatsDisplay({ level, xp, coins, variant = 'compact' }: StatsDis
             <Progress value={current} max={total} color="bg-mario-red" />
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <CoinIcon size={20} />
-          <span className="font-medium text-sm">{coins}</span>
-        </div>
+        {!hideCoins && (
+          <div className="flex items-center gap-1.5">
+            <CoinIcon size={20} />
+            <span className="font-medium text-sm">{coins}</span>
+          </div>
+        )}
       </div>
     )
   }

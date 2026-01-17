@@ -4,6 +4,7 @@ import { Check, Flag, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { AnimatedCoinsDisplay } from '@/components/ui/animated-coins-display'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -125,6 +126,7 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
             xp={localStats.xp}
             coins={localStats.coins}
             variant="compact"
+            hideCoins
           />
         </div>
 
@@ -257,6 +259,9 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
           </Card>
         )}
       </div>
+
+      {/* Coins Display - Canto inferior direito */}
+      <AnimatedCoinsDisplay coins={localStats.coins} />
     </div>
   )
 }
