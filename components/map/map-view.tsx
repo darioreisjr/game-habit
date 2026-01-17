@@ -2,7 +2,7 @@
 
 import { Check, Flag, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,39 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
   const [completingHabit, setCompletingHabit] = useState<string | null>(null)
   const [localCheckins, setLocalCheckins] = useState(checkins)
   const [localStats, setLocalStats] = useState(stats)
+
+  // Realtime subscription para atualizar stats quando conquistas forem desbloqueadas
+  useEffect(() => {
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('stats-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'stats',
+          filter: `user_id=eq.${stats.user_id}`,
+        },
+        (payload) => {
+          const newStats = payload.new as Stats
+          setLocalStats((prev) => {
+            // Só atualiza se os valores do servidor forem maiores
+            // (evita conflito com atualização otimista local)
+            if (newStats.xp > prev.xp || newStats.coins > prev.coins) {
+              return newStats
+            }
+            return prev
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [stats.user_id])
 
   // Otimização: useMemo para evitar recálculos desnecessários
   const completedHabitIds = useMemo(
