@@ -1,19 +1,39 @@
 'use client'
 
-import { Bell, Lock, Palette, Settings } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  Bell,
+  Copy,
+  Eye,
+  EyeOff,
+  Lock,
+  Palette,
+  RefreshCw,
+  Settings,
+  User,
+  Users,
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
-import type { InventoryItem, Theme, UserPreferences } from '@/types/database.types'
+import type { InventoryItem, PublicProfile, Theme, UserPreferences } from '@/types/database.types'
 
 export default function SettingsPage() {
   const [themes, setThemes] = useState<Theme[]>([])
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null)
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [savingProfile, setSavingProfile] = useState(false)
 
-  const loadData = async () => {
+  // Form states for public profile
+  const [displayName, setDisplayName] = useState('')
+  const [username, setUsername] = useState('')
+  const [isSearchable, setIsSearchable] = useState(true)
+
+  const loadData = useCallback(async () => {
     const supabase = createClient()
 
     const {
@@ -22,33 +42,180 @@ export default function SettingsPage() {
 
     if (!user) return
 
-    // Load themes
-    const { data: themesData } = await supabase.from('themes').select('*')
+    // Load all data in parallel
+    const [themesResult, preferencesResult, publicProfileResult, inventoryResult] =
+      await Promise.all([
+        supabase.from('themes').select('*'),
+        supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
+        supabase.from('public_profiles').select('*').eq('user_id', user.id).single(),
+        supabase.from('inventory').select('*').eq('user_id', user.id),
+      ])
 
-    setThemes(themesData || [])
+    setThemes(themesResult.data || [])
+    setPreferences(preferencesResult.data)
+    setInventory(inventoryResult.data || [])
 
-    // Load user preferences
-    const { data: preferencesData } = await supabase
-      .from('user_preferences')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    if (publicProfileResult.data) {
+      setPublicProfile(publicProfileResult.data)
+      setDisplayName(publicProfileResult.data.display_name || '')
+      setUsername(publicProfileResult.data.username || '')
+      setIsSearchable(publicProfileResult.data.is_searchable ?? true)
+    }
 
-    setPreferences(preferencesData)
-
-    // Load user inventory (for theme ownership)
-    const { data: inventoryData } = await supabase
-      .from('inventory')
-      .select('*')
-      .eq('user_id', user.id)
-
-    setInventory(inventoryData || [])
     setLoading(false)
-  }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
+
+  // Create public profile if it doesn't exist
+  const createPublicProfile = async () => {
+    const supabase = createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    // Get user's name from profiles table
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', user.id)
+      .single()
+
+    const name = profile?.name || 'Jogador'
+    const baseUsername = name
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '')
+
+    // Generate unique friend code
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let friendCode = ''
+    for (let i = 0; i < 8; i++) {
+      friendCode += chars[Math.floor(Math.random() * chars.length)]
+    }
+
+    const { data, error } = await supabase
+      .from('public_profiles')
+      .insert({
+        user_id: user.id,
+        username: baseUsername + '_' + Math.random().toString(36).substring(2, 6),
+        display_name: name,
+        is_searchable: true,
+        friend_code: friendCode,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating public profile:', error)
+      toast.error('Erro ao criar perfil público')
+      return
+    }
+
+    setPublicProfile(data)
+    setDisplayName(data.display_name)
+    setUsername(data.username)
+    setIsSearchable(data.is_searchable)
+    toast.success('Perfil público criado!')
+  }
+
+  // Save public profile changes
+  const handleSavePublicProfile = async () => {
+    if (!publicProfile) return
+
+    setSavingProfile(true)
+    const supabase = createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setSavingProfile(false)
+      return
+    }
+
+    // Check if username is unique
+    if (username !== publicProfile.username) {
+      const { data: existingUser } = await supabase
+        .from('public_profiles')
+        .select('user_id')
+        .eq('username', username.toLowerCase())
+        .neq('user_id', user.id)
+        .single()
+
+      if (existingUser) {
+        toast.error('Este nome de usuário já está em uso')
+        setSavingProfile(false)
+        return
+      }
+    }
+
+    const { error } = await supabase
+      .from('public_profiles')
+      .update({
+        display_name: displayName,
+        username: username
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, ''),
+        is_searchable: isSearchable,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Error saving public profile:', error)
+      toast.error('Erro ao salvar perfil')
+    } else {
+      toast.success('Perfil atualizado!')
+      loadData()
+    }
+
+    setSavingProfile(false)
+  }
+
+  // Generate new friend code
+  const handleGenerateNewCode = async () => {
+    const supabase = createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let newCode = ''
+    for (let i = 0; i < 8; i++) {
+      newCode += chars[Math.floor(Math.random() * chars.length)]
+    }
+
+    const { error } = await supabase
+      .from('public_profiles')
+      .update({ friend_code: newCode })
+      .eq('user_id', user.id)
+
+    if (error) {
+      toast.error('Erro ao gerar novo código')
+    } else {
+      toast.success('Novo código gerado!')
+      loadData()
+    }
+  }
+
+  // Copy friend code to clipboard
+  const handleCopyCode = () => {
+    if (publicProfile?.friend_code) {
+      navigator.clipboard.writeText(publicProfile.friend_code)
+      toast.success('Código copiado!')
+    }
+  }
 
   const handleChangeTheme = async (themeKey: string) => {
     const supabase = createClient()
@@ -118,6 +285,145 @@ export default function SettingsPage() {
         <h1 className="text-3xl md:text-4xl font-display font-bold">Configurações</h1>
         <p className="text-text-secondary mt-1">Personalize sua experiência</p>
       </div>
+
+      {/* Public Profile */}
+      <Card className="border-blue-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users size={24} className="text-blue-600" />
+            Perfil Público
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!publicProfile ? (
+            <div className="text-center py-6">
+              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">
+                Você ainda não tem um perfil público. Crie um para que outros jogadores possam te
+                encontrar e adicionar como amigo.
+              </p>
+              <Button onClick={createPublicProfile}>Criar Perfil Público</Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Friend Code */}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Seu Código de Amigo</p>
+                    <p className="text-3xl font-mono font-bold text-blue-600 tracking-wider">
+                      {publicProfile.friend_code}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCopyCode}
+                      className="p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                      title="Copiar código"
+                    >
+                      <Copy className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button
+                      onClick={handleGenerateNewCode}
+                      className="p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                      title="Gerar novo código"
+                    >
+                      <RefreshCw className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Compartilhe este código para que amigos possam te adicionar rapidamente
+                </p>
+              </div>
+
+              {/* Display Name */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="displayName"
+                  className="text-sm font-medium flex items-center gap-2"
+                >
+                  <User size={16} />
+                  Nome de Exibição
+                </label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Como você quer ser chamado"
+                  maxLength={50}
+                />
+                <p className="text-xs text-gray-500">Este nome aparece para outros jogadores</p>
+              </div>
+
+              {/* Username */}
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium">
+                  Nome de Usuário
+                </label>
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-500">
+                    @
+                  </span>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) =>
+                      setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
+                    }
+                    placeholder="seu_usuario"
+                    className="rounded-l-none"
+                    maxLength={30}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  Apenas letras minúsculas, números e underscore
+                </p>
+              </div>
+
+              {/* Visibility Toggle */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  {isSearchable ? (
+                    <Eye className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  )}
+                  <div>
+                    <h3 className="font-semibold">
+                      {isSearchable ? 'Perfil Público' : 'Perfil Privado'}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {isSearchable
+                        ? 'Outros jogadores podem te encontrar e enviar solicitações'
+                        : 'Você não aparece nas buscas de amigos'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSearchable(!isSearchable)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isSearchable ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isSearchable ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Save Button */}
+              <Button onClick={handleSavePublicProfile} disabled={savingProfile} className="w-full">
+                {savingProfile ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Themes */}
       <Card>
