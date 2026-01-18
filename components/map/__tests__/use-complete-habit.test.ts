@@ -230,4 +230,114 @@ describe('useCompleteHabit', () => {
     expect(result.current.completedHabitIds.has('habit-1')).toBe(true)
     expect(result.current.completedHabitIds.has('habit-2')).toBe(false)
   })
+
+  it('should handle aggregate function error (code 42803) with rollback', async () => {
+    mockInsert.mockResolvedValue({
+      error: { code: '42803', message: 'aggregate function calls cannot be nested' },
+    })
+
+    const { result } = renderHook(() =>
+      useCompleteHabit({
+        initialCheckins: mockCheckins,
+        initialStats: mockStats,
+        totalHabits: 3,
+      })
+    )
+
+    const initialXp = result.current.localStats.xp
+
+    await act(async () => {
+      await result.current.completeHabit('habit-1', 'easy')
+    })
+
+    await waitFor(() => {
+      expect(result.current.localStats.xp).toBe(initialXp)
+      expect(result.current.localCheckins).toHaveLength(0)
+    })
+  })
+
+  it('should not rollback on duplicate key error (23505)', async () => {
+    mockInsert.mockResolvedValue({
+      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+    })
+
+    const { result } = renderHook(() =>
+      useCompleteHabit({
+        initialCheckins: mockCheckins,
+        initialStats: mockStats,
+        totalHabits: 3,
+      })
+    )
+
+    await act(async () => {
+      await result.current.completeHabit('habit-1', 'easy')
+    })
+
+    // Should NOT rollback because 23505 is expected (duplicate checkin)
+    expect(result.current.localStats.xp).toBe(60) // 50 + 10 (easy)
+    expect(result.current.localCheckins).toHaveLength(1)
+  })
+
+  it('should handle hard difficulty correctly (+30 XP)', async () => {
+    const { result } = renderHook(() =>
+      useCompleteHabit({
+        initialCheckins: mockCheckins,
+        initialStats: { ...mockStats, xp: 0 },
+        totalHabits: 3,
+      })
+    )
+
+    await act(async () => {
+      await result.current.completeHabit('habit-1', 'hard')
+    })
+
+    expect(result.current.localStats.xp).toBe(30)
+  })
+
+  it('should update level when crossing XP threshold', async () => {
+    const statsNearLevelUp: Stats = {
+      ...mockStats,
+      level: 1,
+      xp: 95, // Assuming level 2 is at 100 XP
+    }
+
+    const { result } = renderHook(() =>
+      useCompleteHabit({
+        initialCheckins: mockCheckins,
+        initialStats: statsNearLevelUp,
+        totalHabits: 3,
+      })
+    )
+
+    await act(async () => {
+      await result.current.completeHabit('habit-1', 'easy') // +10 XP = 105 total
+    })
+
+    // Level should have increased
+    expect(result.current.localStats.xp).toBe(105)
+    expect(result.current.localStats.level).toBeGreaterThan(1)
+  })
+
+  it('should reset completingHabit to null after completion', async () => {
+    mockInsert.mockImplementation(() => {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({ error: null }), 50)
+      })
+    })
+
+    const { result } = renderHook(() =>
+      useCompleteHabit({
+        initialCheckins: mockCheckins,
+        initialStats: mockStats,
+        totalHabits: 3,
+      })
+    )
+
+    await act(async () => {
+      await result.current.completeHabit('habit-1', 'easy')
+    })
+
+    // After completion, should be null
+    expect(result.current.completingHabit).toBeNull()
+  })
 })
