@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
@@ -24,17 +25,28 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
   const [selectedDays, setSelectedDays] = useState<number[]>(habit?.frequency?.days || [])
   const [areas, setAreas] = useState<Area[]>([])
   const [loading, setLoading] = useState(false)
+  const [areasLoading, setAreasLoading] = useState(true)
 
   const loadAreas = async () => {
     const supabase = createClient()
     const { data } = await supabase.from('areas').select('*').order('order_index')
 
     if (data) setAreas(data)
+    setAreasLoading(false)
   }
 
   useEffect(() => {
     loadAreas()
   }, [])
+
+  // Reset form when habit changes
+  useEffect(() => {
+    setName(habit?.name || '')
+    setAreaId(habit?.area_id || '')
+    setDifficulty(habit?.difficulty || 'medium')
+    setFrequencyType(habit?.frequency?.type || 'daily')
+    setSelectedDays(habit?.frequency?.days || [])
+  }, [habit])
 
   const toggleDay = (day: number) => {
     setSelectedDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]))
@@ -42,6 +54,13 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate custom frequency
+    if (frequencyType === 'custom' && selectedDays.length === 0) {
+      toast.error('Selecione pelo menos um dia da semana')
+      return
+    }
+
     setLoading(true)
 
     const supabase = createClient()
@@ -49,7 +68,11 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user) return
+    if (!user) {
+      toast.error('Sessão expirada. Faça login novamente.')
+      setLoading(false)
+      return
+    }
 
     const frequency = {
       type: frequencyType,
@@ -66,9 +89,21 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
     }
 
     if (habit) {
-      await supabase.from('habits').update(habitData).eq('id', habit.id)
+      const { error } = await supabase.from('habits').update(habitData).eq('id', habit.id)
+      if (error) {
+        toast.error(`Erro ao atualizar hábito: ${error.message}`)
+        setLoading(false)
+        return
+      }
+      toast.success('Hábito atualizado com sucesso!')
     } else {
-      await supabase.from('habits').insert(habitData)
+      const { error } = await supabase.from('habits').insert(habitData)
+      if (error) {
+        toast.error(`Erro ao criar hábito: ${error.message}`)
+        setLoading(false)
+        return
+      }
+      toast.success('Hábito criado com sucesso!')
     }
 
     setLoading(false)
@@ -78,21 +113,29 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Nome do hábito</label>
+        <label htmlFor="habit-name" className="text-sm font-medium">
+          Nome do hábito
+        </label>
         <Input
+          id="habit-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Ex: Beber 2L de água"
           required
+          autoFocus
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Área</label>
+        <label htmlFor="habit-area" className="text-sm font-medium">
+          Área
+        </label>
         <select
+          id="habit-area"
           value={areaId}
           onChange={(e) => setAreaId(e.target.value)}
-          className="flex h-12 w-full rounded-xl border-2 border-border bg-white px-4 py-2 text-base"
+          className="flex h-12 w-full rounded-xl border-2 border-border bg-white px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-mario-red/50 focus:border-mario-red"
+          disabled={areasLoading}
         >
           <option value="">Sem área</option>
           {areas.map((area) => (
@@ -111,6 +154,7 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
               key={diff}
               type="button"
               onClick={() => setDifficulty(diff)}
+              aria-pressed={difficulty === diff}
               className={`flex-1 p-3 rounded-xl border-2 transition-all ${
                 difficulty === diff
                   ? 'border-mario-red bg-mario-red/5'
@@ -138,6 +182,7 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
           <button
             type="button"
             onClick={() => setFrequencyType('daily')}
+            aria-pressed={frequencyType === 'daily'}
             className={`flex-1 p-3 rounded-xl border-2 transition-all ${
               frequencyType === 'daily' ? 'border-mario-red bg-mario-red/5' : 'border-border'
             }`}
@@ -147,6 +192,7 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
           <button
             type="button"
             onClick={() => setFrequencyType('custom')}
+            aria-pressed={frequencyType === 'custom'}
             className={`flex-1 p-3 rounded-xl border-2 transition-all ${
               frequencyType === 'custom' ? 'border-mario-red bg-mario-red/5' : 'border-border'
             }`}
@@ -162,10 +208,12 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
                 key={index}
                 type="button"
                 onClick={() => toggleDay(index)}
+                aria-pressed={selectedDays.includes(index)}
+                aria-label={`${day}${selectedDays.includes(index) ? ' selecionado' : ''}`}
                 className={`flex-1 p-2 rounded-lg border-2 text-sm transition-all ${
                   selectedDays.includes(index)
                     ? 'border-mario-blue bg-mario-blue text-white'
-                    : 'border-border'
+                    : 'border-border hover:border-mario-blue/50'
                 }`}
               >
                 {day}
@@ -176,7 +224,7 @@ export function HabitForm({ habit, onSuccess, onCancel }: HabitFormProps) {
       </div>
 
       <div className="flex gap-3 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>
