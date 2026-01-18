@@ -71,9 +71,56 @@ export default function FriendsPage() {
   const loadFriends = useCallback(async () => {
     const supabase = createClient()
     try {
-      const { data, error } = await supabase.rpc('get_friends')
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Buscar amizades aceitas onde o usuário é requester ou addressee
+      const { data: friendships, error } = await supabase
+        .from('friendships')
+        .select('id, requester_id, addressee_id, created_at')
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+
       if (error) throw error
-      setFriends(data || [])
+      if (!friendships || friendships.length === 0) {
+        setFriends([])
+        return
+      }
+
+      // Extrair IDs dos amigos
+      const friendIds = friendships.map((f) =>
+        f.requester_id === user.id ? f.addressee_id : f.requester_id
+      )
+
+      // Buscar perfis e stats dos amigos
+      const [profilesResult, statsResult] = await Promise.all([
+        supabase
+          .from('public_profiles')
+          .select('user_id, username, display_name, avatar_url')
+          .in('user_id', friendIds),
+        supabase.from('stats').select('user_id, level, xp').in('user_id', friendIds),
+      ])
+
+      // Montar dados dos amigos
+      const friendsData: FriendData[] = friendships.map((f) => {
+        const friendId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+        const profile = profilesResult.data?.find((p) => p.user_id === friendId)
+        const stat = statsResult.data?.find((s) => s.user_id === friendId)
+
+        return {
+          friend_id: friendId,
+          friend_username: profile?.username || 'usuario',
+          friend_display_name: profile?.display_name || 'Jogador',
+          friend_avatar_url: profile?.avatar_url || null,
+          friend_level: stat?.level || 1,
+          friend_xp: stat?.xp || 0,
+          friendship_since: f.created_at,
+        }
+      })
+
+      setFriends(friendsData)
     } catch (error) {
       console.error('Error loading friends:', error)
     }
@@ -153,8 +200,12 @@ export default function FriendsPage() {
         }
 
         // Queries paralelas para performance
-        const [friendsResult, requestsResult] = await Promise.all([
-          supabase.rpc('get_friends'),
+        const [friendshipsResult, requestsResult] = await Promise.all([
+          supabase
+            .from('friendships')
+            .select('id, requester_id, addressee_id, created_at')
+            .eq('status', 'accepted')
+            .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
           supabase
             .from('friendships')
             .select('*')
@@ -164,7 +215,40 @@ export default function FriendsPage() {
 
         if (!mounted) return
 
-        if (friendsResult.data) setFriends(friendsResult.data)
+        // Processar amigos aceitos
+        if (friendshipsResult.data && friendshipsResult.data.length > 0) {
+          const friendIds = friendshipsResult.data.map((f) =>
+            f.requester_id === user.id ? f.addressee_id : f.requester_id
+          )
+
+          const [profilesRes, statsRes] = await Promise.all([
+            supabase
+              .from('public_profiles')
+              .select('user_id, username, display_name, avatar_url')
+              .in('user_id', friendIds),
+            supabase.from('stats').select('user_id, level, xp').in('user_id', friendIds),
+          ])
+
+          if (!mounted) return
+
+          const friendsData: FriendData[] = friendshipsResult.data.map((f) => {
+            const friendId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+            const profile = profilesRes.data?.find((p) => p.user_id === friendId)
+            const stat = statsRes.data?.find((s) => s.user_id === friendId)
+
+            return {
+              friend_id: friendId,
+              friend_username: profile?.username || 'usuario',
+              friend_display_name: profile?.display_name || 'Jogador',
+              friend_avatar_url: profile?.avatar_url || null,
+              friend_level: stat?.level || 1,
+              friend_xp: stat?.xp || 0,
+              friendship_since: f.created_at,
+            }
+          })
+
+          setFriends(friendsData)
+        }
 
         // Enriquecer requests com perfis
         if (requestsResult.data && requestsResult.data.length > 0) {
