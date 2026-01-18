@@ -10,22 +10,40 @@ export default async function HomePage() {
 
   if (!user) return null
 
-  // Fetch user stats
-  const { data: stats } = await supabase.from('stats').select('*').eq('user_id', user.id).single()
-
-  // Fetch user profile
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-
-  // Fetch today's habits
   const today = new Date().toISOString().split('T')[0]
   const dayOfWeek = new Date().getDay()
 
-  const { data: allHabits } = await supabase
-    .from('habits')
-    .select('*, area:areas(*)')
-    .eq('user_id', user.id)
-    .eq('is_archived', false)
-    .order('created_at')
+  // Calculate date 7 days ago for recent checkins
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+
+  // Fetch all data in parallel for better performance
+  const [
+    { data: stats },
+    { data: profile },
+    { data: allHabits },
+    { data: checkins },
+    { data: streak },
+    { data: recentCheckins },
+  ] = await Promise.all([
+    supabase.from('stats').select('*').eq('user_id', user.id).single(),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase
+      .from('habits')
+      .select('*, area:areas(*)')
+      .eq('user_id', user.id)
+      .eq('is_archived', false)
+      .order('created_at'),
+    supabase.from('checkins').select('*').eq('user_id', user.id).eq('date', today),
+    supabase.from('streaks').select('*').eq('user_id', user.id).single(),
+    supabase
+      .from('checkins')
+      .select('habit_id, date')
+      .eq('user_id', user.id)
+      .gte('date', sevenDaysAgoStr)
+      .lte('date', today),
+  ])
 
   // Filter habits for today
   const todayHabits = allHabits?.filter((habit) => {
@@ -35,13 +53,6 @@ export default async function HomePage() {
     }
     return false
   })
-
-  // Fetch today's check-ins
-  const { data: checkins } = await supabase
-    .from('checkins')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('date', today)
 
   const displayName =
     profile?.name ||
@@ -67,6 +78,8 @@ export default async function HomePage() {
       }}
       habits={todayHabits || []}
       checkins={checkins || []}
+      streak={streak}
+      recentCheckins={recentCheckins || []}
     />
   )
 }
