@@ -2,31 +2,68 @@
 
 import { Check, Flag, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ConfettiCelebration } from '@/components/map/confetti-celebration'
+import { DailyXPPreview } from '@/components/map/daily-xp-preview'
+import { EmptyState } from '@/components/map/empty-state'
+import { HabitContextMenu } from '@/components/map/habit-context-menu'
+import { HabitMiniHistory } from '@/components/map/habit-mini-history'
+import { HabitPeriodGroup } from '@/components/map/habit-period-group'
+import { MotivationalQuote } from '@/components/map/motivational-quote'
+import { StreakCounter } from '@/components/map/streak-counter'
 import { AnimatedCoinsDisplay } from '@/components/ui/animated-coins-display'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { StatsDisplay } from '@/components/ui/stats-display'
+import { DIFFICULTY_CONFIG, getTimePeriodFromTime, type TimePeriod } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { getLevelFromXP, getXPForDifficulty } from '@/lib/utils'
-import type { Checkin, Habit, Profile, Stats } from '@/types/database.types'
+import { cn, getLevelFromXP, getXPForDifficulty } from '@/lib/utils'
+import type {
+  Checkin,
+  Habit,
+  HabitDifficulty,
+  Profile,
+  Stats,
+  Streak,
+} from '@/types/database.types'
+
+interface RecentCheckin {
+  habit_id: string
+  date: string
+}
 
 interface MapViewProps {
   stats: Stats
   profile: Profile
   habits: Habit[]
   checkins: Checkin[]
+  streak?: Streak | null
+  recentCheckins?: RecentCheckin[]
 }
 
-export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
+interface GroupedHabits {
+  morning: Habit[]
+  afternoon: Habit[]
+  evening: Habit[]
+}
+
+export function MapView({
+  stats,
+  profile,
+  habits,
+  checkins,
+  streak,
+  recentCheckins = [],
+}: MapViewProps) {
   const router = useRouter()
   const [completingHabit, setCompletingHabit] = useState<string | null>(null)
   const [localCheckins, setLocalCheckins] = useState(checkins)
   const [localStats, setLocalStats] = useState(stats)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [justCompletedAll, setJustCompletedAll] = useState(false)
 
-  // Realtime subscription para atualizar stats quando conquistas forem desbloqueadas
   useEffect(() => {
     const supabase = createClient()
 
@@ -43,8 +80,6 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
         (payload) => {
           const newStats = payload.new as Stats
           setLocalStats((prev) => {
-            // Só atualiza se os valores do servidor forem maiores
-            // (evita conflito com atualização otimista local)
             if (newStats.xp > prev.xp || newStats.coins > prev.coins) {
               return newStats
             }
@@ -59,7 +94,6 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
     }
   }, [stats.user_id])
 
-  // Otimização: useMemo para evitar recálculos desnecessários
   const completedHabitIds = useMemo(
     () => new Set(localCheckins.map((c) => c.habit_id)),
     [localCheckins]
@@ -68,7 +102,6 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
   const totalCount = habits.length
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
-  // Otimização: greeting calculado apenas uma vez (não muda durante a sessão)
   const greeting = useMemo(() => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Bom dia'
@@ -76,82 +109,217 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
     return 'Boa noite'
   }, [])
 
-  const handleCompleteHabit = async (habitId: string, difficulty: string) => {
-    setCompletingHabit(habitId)
-
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    const today = new Date().toISOString().split('T')[0]
-
-    if (!user) {
-      toast.error('Sessão expirada. Faça login novamente.', { position: 'top-right' })
-      setCompletingHabit(null)
-      return
+  const groupedHabits = useMemo(() => {
+    const groups: GroupedHabits = {
+      morning: [],
+      afternoon: [],
+      evening: [],
     }
 
-    // Verifica se já foi completado hoje
-    const alreadyCompleted = localCheckins.some((c) => c.habit_id === habitId && c.date === today)
-    if (alreadyCompleted) {
-      setCompletingHabit(null)
-      return
+    habits.forEach((habit) => {
+      const period = getTimePeriodFromTime(habit.preferred_time)
+      groups[period].push(habit)
+    })
+
+    return groups
+  }, [habits])
+
+  const hasMultiplePeriods = useMemo(() => {
+    const nonEmptyPeriods = Object.values(groupedHabits).filter((g) => g.length > 0)
+    return nonEmptyPeriods.length > 1
+  }, [groupedHabits])
+
+  useEffect(() => {
+    if (progress === 100 && totalCount > 0 && !justCompletedAll) {
+      setShowConfetti(true)
+      setJustCompletedAll(true)
     }
+  }, [progress, totalCount, justCompletedAll])
 
-    const optimisticCheckin = {
-      id: crypto.randomUUID(),
-      habit_id: habitId,
-      user_id: user.id,
-      date: today,
-      created_at: new Date().toISOString(),
-    }
+  const handleCompleteHabit = useCallback(
+    async (habitId: string, difficulty: string) => {
+      setCompletingHabit(habitId)
 
-    // Atualização otimista dos checkins
-    setLocalCheckins((prev) => [...prev, optimisticCheckin])
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const today = new Date().toISOString().split('T')[0]
 
-    // Atualização otimista das stats (XP, level, coins)
-    const xpGain = getXPForDifficulty(difficulty as 'easy' | 'medium' | 'hard')
-    const previousStats = localStats
-    setLocalStats((prev) => {
-      const newXp = prev.xp + xpGain
-      const newLevel = getLevelFromXP(newXp)
-      // Coins: 1 coin a cada 50 XP (mesma lógica do banco)
-      const newCoins = prev.coins + Math.floor(newXp / 50) - Math.floor(prev.xp / 50)
-      return {
-        ...prev,
-        xp: newXp,
-        level: newLevel,
-        coins: newCoins,
+      if (!user) {
+        toast.error('Sessão expirada. Faça login novamente.', { position: 'top-right' })
+        setCompletingHabit(null)
+        return
       }
-    })
 
-    const { error } = await supabase.from('checkins').insert({
-      habit_id: habitId,
-      user_id: user.id,
-      date: today,
-    })
+      const alreadyCompleted = localCheckins.some((c) => c.habit_id === habitId && c.date === today)
+      if (alreadyCompleted) {
+        setCompletingHabit(null)
+        return
+      }
 
-    if (error && error.code !== '23505') {
-      console.error('Erro ao salvar checkin:', error)
-      toast.error(`Não foi possível salvar o checkin: ${error.message}`, { position: 'top-right' })
-      // Rollback das atualizações otimistas
-      setLocalCheckins((prev) => prev.filter((c) => !(c.habit_id === habitId && c.date === today)))
-      setLocalStats(previousStats)
-    }
+      const optimisticCheckin = {
+        id: crypto.randomUUID(),
+        habit_id: habitId,
+        user_id: user.id,
+        date: today,
+        created_at: new Date().toISOString(),
+      }
 
-    setCompletingHabit(null)
-  }
+      setLocalCheckins((prev) => [...prev, optimisticCheckin])
+
+      const xpGain = getXPForDifficulty(difficulty as 'easy' | 'medium' | 'hard')
+      const previousStats = localStats
+      setLocalStats((prev) => {
+        const newXp = prev.xp + xpGain
+        const newLevel = getLevelFromXP(newXp)
+        const newCoins = prev.coins + Math.floor(newXp / 50) - Math.floor(prev.xp / 50)
+        return {
+          ...prev,
+          xp: newXp,
+          level: newLevel,
+          coins: newCoins,
+        }
+      })
+
+      const { error } = await supabase.from('checkins').insert({
+        habit_id: habitId,
+        user_id: user.id,
+        date: today,
+      })
+
+      if (error && error.code !== '23505') {
+        console.error('Erro ao salvar checkin:', error)
+        toast.error(`Não foi possível salvar o checkin: ${error.message}`, {
+          position: 'top-right',
+        })
+        setLocalCheckins((prev) =>
+          prev.filter((c) => !(c.habit_id === habitId && c.date === today))
+        )
+        setLocalStats(previousStats)
+      }
+
+      setCompletingHabit(null)
+    },
+    [localCheckins, localStats]
+  )
+
+  const handleArchiveHabit = useCallback(
+    async (habitId: string) => {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_archived: true })
+        .eq('id', habitId)
+
+      if (error) {
+        toast.error('Erro ao arquivar hábito', { position: 'top-right' })
+      } else {
+        toast.success('Hábito arquivado', { position: 'top-right' })
+        router.refresh()
+      }
+    },
+    [router]
+  )
+
+  const renderHabitCard = useCallback(
+    (habit: Habit) => {
+      const isCompleted = completedHabitIds.has(habit.id)
+      const isLoading = completingHabit === habit.id
+      const difficultyConfig = DIFFICULTY_CONFIG[habit.difficulty as HabitDifficulty]
+
+      return (
+        <Card
+          key={habit.id}
+          className={cn(
+            'transition-all duration-quick',
+            isCompleted && 'bg-mario-green/5 border-mario-green/30'
+          )}
+        >
+          <div className="p-4 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => !isCompleted && handleCompleteHabit(habit.id, habit.difficulty)}
+              disabled={isCompleted || isLoading}
+              className={cn(
+                'flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all',
+                isCompleted
+                  ? 'bg-mario-green border-mario-green text-white'
+                  : 'border-border hover:border-mario-red hover:scale-110'
+              )}
+            >
+              {isCompleted ? (
+                <Check size={24} />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-background-light" />
+              )}
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3
+                  className={cn(
+                    'font-medium truncate',
+                    isCompleted && 'line-through text-text-secondary'
+                  )}
+                >
+                  {habit.name}
+                </h3>
+                {isCompleted && <Badge variant="success">Completo!</Badge>}
+              </div>
+
+              <div className="flex items-center gap-3">
+                {habit.area && (
+                  <div className="flex items-center gap-1 text-sm text-text-secondary">
+                    <span>{habit.area.icon}</span>
+                    <span>{habit.area.name}</span>
+                  </div>
+                )}
+                <HabitMiniHistory
+                  habitId={habit.id}
+                  recentCheckins={recentCheckins}
+                  className="hidden sm:flex"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Badge variant={difficultyConfig.variant}>+{difficultyConfig.xp} XP</Badge>
+              <HabitContextMenu
+                habitId={habit.id}
+                habitName={habit.name}
+                onArchive={handleArchiveHabit}
+              />
+            </div>
+          </div>
+        </Card>
+      )
+    },
+    [completedHabitIds, completingHabit, handleCompleteHabit, handleArchiveHabit, recentCheckins]
+  )
+
+  const getCompletedCountForPeriod = useCallback(
+    (periodHabits: Habit[]) => {
+      return periodHabits.filter((h) => completedHabitIds.has(h.id)).length
+    },
+    [completedHabitIds]
+  )
 
   return (
     <div className="min-h-screen md:ml-64">
+      <ConfettiCelebration trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
+
       <div className="max-w-2xl mx-auto p-4 md:p-6 md:py-8 space-y-6">
         {/* Header */}
         <div className="space-y-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-display font-bold">
-              {greeting}, {profile.name}!
-            </h1>
-            <p className="text-text-secondary mt-1">Mundo 1-1: Hoje</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-display font-bold">
+                {greeting}, {profile.name}!
+              </h1>
+              <p className="text-text-secondary mt-1">Mundo 1-1: Hoje</p>
+            </div>
+            <StreakCounter currentStreak={streak?.current_streak || 0} />
           </div>
 
           <StatsDisplay
@@ -161,6 +329,8 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
             variant="compact"
             hideCoins
           />
+
+          <MotivationalQuote />
         </div>
 
         {/* Progress Banner */}
@@ -183,6 +353,9 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
                 style={{ width: `${progress}%` }}
               />
             </div>
+            <div className="mt-3">
+              <DailyXPPreview habits={habits} completedHabitIds={completedHabitIds} />
+            </div>
           </div>
         </Card>
 
@@ -202,98 +375,34 @@ export function MapView({ stats, profile, habits, checkins }: MapViewProps) {
           </div>
 
           {habits.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-text-secondary mb-4">Você ainda não tem hábitos configurados.</p>
-              <Button onClick={() => router.push('/habits?new=1')}>Criar primeiro hábito</Button>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {habits.map((habit) => {
-                const isCompleted = completedHabitIds.has(habit.id)
-                const isLoading = completingHabit === habit.id
+            <EmptyState variant="no-habits" userName={profile.name} />
+          ) : hasMultiplePeriods ? (
+            <div className="space-y-4">
+              {(['morning', 'afternoon', 'evening'] as TimePeriod[]).map((period) => {
+                const periodHabits = groupedHabits[period]
+                if (periodHabits.length === 0) return null
 
                 return (
-                  <Card
-                    key={habit.id}
-                    className={`transition-all duration-quick ${
-                      isCompleted ? 'bg-mario-green/5 border-mario-green/30' : ''
-                    }`}
+                  <HabitPeriodGroup
+                    key={period}
+                    period={period}
+                    count={periodHabits.length}
+                    completedCount={getCompletedCountForPeriod(periodHabits)}
                   >
-                    <div className="p-4 flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          !isCompleted && handleCompleteHabit(habit.id, habit.difficulty)
-                        }
-                        disabled={isCompleted || isLoading}
-                        className={`flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? 'bg-mario-green border-mario-green text-white'
-                            : 'border-border hover:border-mario-red hover:scale-110'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <Check size={24} />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-background-light" />
-                        )}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3
-                            className={`font-medium truncate ${
-                              isCompleted ? 'line-through text-text-secondary' : ''
-                            }`}
-                          >
-                            {habit.name}
-                          </h3>
-                          {isCompleted && <Badge variant="success">Completo!</Badge>}
-                        </div>
-                        {habit.area && (
-                          <div className="flex items-center gap-2 text-sm text-text-secondary">
-                            <span>{habit.area.icon}</span>
-                            <span>{habit.area.name}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-shrink-0">
-                        <Badge
-                          variant={
-                            habit.difficulty === 'easy'
-                              ? 'success'
-                              : habit.difficulty === 'medium'
-                                ? 'blue'
-                                : 'warning'
-                          }
-                        >
-                          +{getXPForDifficulty(habit.difficulty)} XP
-                        </Badge>
-                      </div>
-                    </div>
-                  </Card>
+                    {periodHabits.map(renderHabitCard)}
+                  </HabitPeriodGroup>
                 )
               })}
             </div>
+          ) : (
+            <div className="space-y-3">{habits.map(renderHabitCard)}</div>
           )}
         </div>
 
         {/* Completion Message */}
-        {progress === 100 && habits.length > 0 && (
-          <Card className="bg-gradient-to-r from-mario-yellow/20 to-mario-green/20 border-mario-green">
-            <div className="p-6 text-center">
-              <div className="text-5xl mb-3">🎉</div>
-              <h3 className="text-2xl font-display font-bold mb-2">Parabéns!</h3>
-              <p className="text-text-secondary">
-                Você completou todas as fases de hoje! Continue assim!
-              </p>
-            </div>
-          </Card>
-        )}
+        {progress === 100 && habits.length > 0 && <EmptyState variant="all-completed" />}
       </div>
 
-      {/* Coins Display - Canto inferior direito */}
       <AnimatedCoinsDisplay coins={localStats.coins} />
     </div>
   )
