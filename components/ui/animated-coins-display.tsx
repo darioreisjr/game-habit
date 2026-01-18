@@ -1,17 +1,22 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
+import { ShoppingBag } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { CoinIcon } from '@/components/ui/coin-icon'
 
 interface AnimatedCoinsDisplayProps {
   coins: number
+  showShopHint?: boolean
 }
 
-export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
+export function AnimatedCoinsDisplay({ coins, showShopHint = true }: AnimatedCoinsDisplayProps) {
+  const router = useRouter()
   const [displayCoins, setDisplayCoins] = useState(coins)
   const [coinDiff, setCoinDiff] = useState(0)
   const [showAnimation, setShowAnimation] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   const prevCoinsRef = useRef(coins)
 
   useEffect(() => {
@@ -20,7 +25,6 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
       setCoinDiff(diff)
       setShowAnimation(true)
 
-      // Animação de contagem
       const duration = 500
       const steps = 20
       const increment = diff / steps
@@ -36,7 +40,6 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
         }
       }, duration / steps)
 
-      // Esconde a animação de +coins
       const timeout = setTimeout(() => {
         setShowAnimation(false)
       }, 1500)
@@ -53,6 +56,10 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
     }
   }, [coins])
 
+  const handleClick = () => {
+    router.push('/shop')
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.8 }}
@@ -60,13 +67,15 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
       className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50"
     >
       <div className="relative">
-        {/* Container principal */}
-        <motion.div
-          className="flex items-center gap-2 bg-gradient-to-r from-mario-yellow/90 to-yellow-500/90 backdrop-blur-sm px-4 py-2.5 rounded-full shadow-lg border-2 border-yellow-600"
+        <motion.button
+          type="button"
+          onClick={handleClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="flex items-center gap-2 bg-gradient-to-r from-mario-yellow/90 to-yellow-500/90 backdrop-blur-sm px-4 py-2.5 rounded-full shadow-lg border-2 border-yellow-600 cursor-pointer"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          {/* Coin Icon com animação de rotação quando ganha coins */}
           <motion.div
             animate={
               showAnimation
@@ -81,7 +90,6 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
             <CoinIcon size={28} className="shadow-md" />
           </motion.div>
 
-          {/* Valor dos coins */}
           <motion.span
             key={displayCoins}
             initial={showAnimation ? { scale: 1.2 } : { scale: 1 }}
@@ -91,11 +99,22 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
             {displayCoins}
           </motion.span>
 
-          {/* Coins flutuantes quando ganha */}
+          <AnimatePresence>
+            {showShopHint && isHovered && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                className="overflow-hidden"
+              >
+                <ShoppingBag size={18} className="text-yellow-800 ml-1" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>
             {showAnimation && (
               <>
-                {/* Coins pequenos subindo */}
                 {[...Array(3)].map((_, i) => (
                   <motion.div
                     key={`floating-coin-${i}`}
@@ -123,7 +142,6 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
                   </motion.div>
                 ))}
 
-                {/* Badge +X coins */}
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.5 }}
                   animate={{ opacity: 1, y: -45, scale: 1 }}
@@ -138,9 +156,23 @@ export function AnimatedCoinsDisplay({ coins }: AnimatedCoinsDisplayProps) {
               </>
             )}
           </AnimatePresence>
-        </motion.div>
+        </motion.button>
 
-        {/* Brilho de fundo */}
+        <AnimatePresence>
+          {showShopHint && isHovered && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap"
+            >
+              <span className="text-xs bg-text-primary text-white px-2 py-1 rounded-md shadow-md">
+                Ir para Loja
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div
           animate={
             showAnimation
