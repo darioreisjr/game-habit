@@ -1,8 +1,8 @@
 'use client'
 
 import { Plus } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { HabitFormModal } from '@/components/habits/habit-form-modal'
 import { EmptyState } from '@/components/map/empty-state'
 import { HabitCard } from '@/components/map/habit-card'
 import { HabitPeriodGroup } from '@/components/map/habit-period-group'
@@ -29,6 +29,7 @@ interface HabitListProps {
   userName: string
   onCompleteHabit: (habitId: string, difficulty: HabitDifficulty) => void
   onArchiveHabit: (habitId: string) => void
+  onHabitCreated?: () => void
 }
 
 export function HabitList({
@@ -39,8 +40,9 @@ export function HabitList({
   userName,
   onCompleteHabit,
   onArchiveHabit,
+  onHabitCreated,
 }: HabitListProps) {
-  const router = useRouter()
+  const [showNewHabitModal, setShowNewHabitModal] = useState(false)
 
   const groupedHabits = useMemo(() => {
     const groups: GroupedHabits = {
@@ -91,7 +93,7 @@ export function HabitList({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => router.push('/habits?new=1')}
+          onClick={() => setShowNewHabitModal(true)}
           className="gap-2"
         >
           <Plus size={16} />
@@ -122,6 +124,15 @@ export function HabitList({
       ) : (
         <div className="space-y-3">{habits.map(renderHabitCard)}</div>
       )}
+
+      <HabitFormModal
+        isOpen={showNewHabitModal}
+        onClose={() => setShowNewHabitModal(false)}
+        onSuccess={() => {
+          setShowNewHabitModal(false)
+          onHabitCreated?.()
+        }}
+      />
     </div>
   )
 }
