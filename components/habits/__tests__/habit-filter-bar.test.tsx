@@ -43,26 +43,30 @@ describe('HabitFilterBar', () => {
     expect(screen.getByPlaceholderText('Buscar hábitos...')).toBeInTheDocument()
   })
 
-  it('should render area filter buttons', () => {
+  it('should render area dropdown button with default text', () => {
     render(<HabitFilterBar {...defaultProps} />)
 
-    expect(screen.getByText('Todos')).toBeInTheDocument()
-    expect(screen.getByText(/💪/)).toBeInTheDocument()
-    expect(screen.getByText(/Saúde/)).toBeInTheDocument()
-    expect(screen.getByText(/💼/)).toBeInTheDocument()
-    expect(screen.getByText(/Trabalho/)).toBeInTheDocument()
+    expect(screen.getByText('Todas as áreas')).toBeInTheDocument()
   })
 
-  it('should render archived toggle button', () => {
+  it('should render segmented control tabs', () => {
     render(<HabitFilterBar {...defaultProps} />)
 
-    expect(screen.getByText('Ver arquivados')).toBeInTheDocument()
+    expect(screen.getByText('Ativos')).toBeInTheDocument()
+    expect(screen.getByText('Arquivados')).toBeInTheDocument()
   })
 
-  it('should show "Ver ativos" when showing archived', () => {
-    render(<HabitFilterBar {...defaultProps} showArchived={true} />)
+  it('should show area options when dropdown is clicked', () => {
+    render(<HabitFilterBar {...defaultProps} />)
 
-    expect(screen.getByText('Ver ativos')).toBeInTheDocument()
+    // Click the dropdown button
+    fireEvent.click(screen.getByText('Todas as áreas'))
+
+    // Check that areas are visible in the dropdown
+    expect(screen.getByText('💪')).toBeInTheDocument()
+    expect(screen.getByText('Saúde')).toBeInTheDocument()
+    expect(screen.getByText('💼')).toBeInTheDocument()
+    expect(screen.getByText('Trabalho')).toBeInTheDocument()
   })
 
   it('should call onSearchChange when typing in search', () => {
@@ -92,47 +96,56 @@ describe('HabitFilterBar', () => {
     expect(onSearchChange).toHaveBeenCalledWith('')
   })
 
-  it('should call onAreaChange when area button is clicked', () => {
+  it('should call onAreaChange when area is selected from dropdown', () => {
     const onAreaChange = vi.fn()
     render(<HabitFilterBar {...defaultProps} onAreaChange={onAreaChange} />)
 
-    fireEvent.click(screen.getByText(/Saúde/))
+    // Open dropdown
+    fireEvent.click(screen.getByText('Todas as áreas'))
+
+    // Click on Saúde
+    fireEvent.click(screen.getByText('Saúde'))
 
     expect(onAreaChange).toHaveBeenCalledWith('area-1')
   })
 
-  it('should call onAreaChange with "all" when Todos is clicked', () => {
+  it('should call onAreaChange with "all" when Todas as áreas is clicked', () => {
     const onAreaChange = vi.fn()
     render(<HabitFilterBar {...defaultProps} selectedArea="area-1" onAreaChange={onAreaChange} />)
 
-    fireEvent.click(screen.getByText('Todos'))
+    // When an area is selected, the dropdown shows the area name
+    // Open dropdown by clicking the dropdown button
+    fireEvent.click(screen.getByText('Saúde'))
+
+    // Click on "Todas as áreas" option in dropdown
+    fireEvent.click(screen.getByText('Todas as áreas'))
 
     expect(onAreaChange).toHaveBeenCalledWith('all')
   })
 
-  it('should highlight selected area', () => {
+  it('should show selected area name in dropdown button', () => {
     render(<HabitFilterBar {...defaultProps} selectedArea="area-1" />)
 
-    const saudeButton = screen.getByText(/Saúde/).closest('button')
-    expect(saudeButton).toHaveClass('bg-mario-red')
+    // The dropdown button should show the selected area name
+    expect(screen.getByText('Saúde')).toBeInTheDocument()
   })
 
-  it('should call onArchivedChange when archive toggle is clicked', () => {
+  it('should call onArchivedChange when Arquivados tab is clicked', () => {
     const onArchivedChange = vi.fn()
     render(<HabitFilterBar {...defaultProps} onArchivedChange={onArchivedChange} />)
 
-    fireEvent.click(screen.getByText('Ver arquivados'))
+    fireEvent.click(screen.getByText('Arquivados'))
 
     expect(onArchivedChange).toHaveBeenCalledWith(true)
   })
 
-  it('should toggle archived back to false', () => {
+  it('should call onArchivedChange with false when Ativos tab is clicked', () => {
     const onArchivedChange = vi.fn()
     render(
       <HabitFilterBar {...defaultProps} showArchived={true} onArchivedChange={onArchivedChange} />
     )
 
-    fireEvent.click(screen.getByText('Ver ativos'))
+    fireEvent.click(screen.getByText('Ativos'))
 
     expect(onArchivedChange).toHaveBeenCalledWith(false)
   })
@@ -140,13 +153,13 @@ describe('HabitFilterBar', () => {
   it('should show clear filters button when there are active filters', () => {
     render(<HabitFilterBar {...defaultProps} activeFiltersCount={2} />)
 
-    expect(screen.getByText('Limpar (2)')).toBeInTheDocument()
+    expect(screen.getByText('Limpar filtros (2)')).toBeInTheDocument()
   })
 
   it('should not show clear filters button when no active filters', () => {
     render(<HabitFilterBar {...defaultProps} activeFiltersCount={0} />)
 
-    expect(screen.queryByText(/Limpar \(/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Limpar filtros/)).not.toBeInTheDocument()
   })
 
   it('should call onClearFilters when clear filters is clicked', () => {
@@ -155,23 +168,26 @@ describe('HabitFilterBar', () => {
       <HabitFilterBar {...defaultProps} activeFiltersCount={1} onClearFilters={onClearFilters} />
     )
 
-    fireEvent.click(screen.getByText('Limpar (1)'))
+    fireEvent.click(screen.getByText('Limpar filtros (1)'))
 
     expect(onClearFilters).toHaveBeenCalled()
   })
 
-  it('should have proper aria-pressed for selected area', () => {
-    render(<HabitFilterBar {...defaultProps} selectedArea="all" />)
+  it('should have proper aria-pressed for active tab', () => {
+    render(<HabitFilterBar {...defaultProps} showArchived={false} />)
 
-    const todosButton = screen.getByText('Todos')
-    expect(todosButton).toHaveAttribute('aria-pressed', 'true')
+    const ativosButton = screen.getByText('Ativos').closest('button')
+    expect(ativosButton).toHaveAttribute('aria-pressed', 'true')
+
+    const arquivadosButton = screen.getByText('Arquivados').closest('button')
+    expect(arquivadosButton).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('should have proper aria-pressed for archived toggle', () => {
+  it('should have proper aria-pressed for archived tab when selected', () => {
     render(<HabitFilterBar {...defaultProps} showArchived={true} />)
 
-    const archivedButton = screen.getByText('Ver ativos')
-    expect(archivedButton).toHaveAttribute('aria-pressed', 'true')
+    const arquivadosButton = screen.getByText('Arquivados').closest('button')
+    expect(arquivadosButton).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('should have accessible search input', () => {
@@ -179,5 +195,17 @@ describe('HabitFilterBar', () => {
 
     const searchInput = screen.getByLabelText('Buscar hábitos')
     expect(searchInput).toBeInTheDocument()
+  })
+
+  it('should have aria-expanded on dropdown button', () => {
+    render(<HabitFilterBar {...defaultProps} />)
+
+    const dropdownButton = screen.getByText('Todas as áreas').closest('button')
+    expect(dropdownButton).toHaveAttribute('aria-expanded', 'false')
+
+    // Open dropdown
+    fireEvent.click(dropdownButton!)
+
+    expect(dropdownButton).toHaveAttribute('aria-expanded', 'true')
   })
 })
