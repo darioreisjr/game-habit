@@ -113,6 +113,7 @@ export function MapView({
           userName={profile.name}
           onCompleteHabit={completeHabit}
           onArchiveHabit={handleArchiveHabit}
+          onHabitCreated={() => router.refresh()}
         />
 
         <CompletionMessage isVisible={progress === 100 && habits.length > 0} />
