@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
@@ -43,7 +44,15 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
     if (!user) return
 
     if (area) {
-      await supabase.from('areas').update({ name, color, icon }).eq('id', area.id)
+      const { error } = await supabase.from('areas').update({ name, color, icon }).eq('id', area.id)
+
+      if (error) {
+        toast.error('Erro ao atualizar área')
+        setLoading(false)
+        return
+      }
+
+      toast.success('Área atualizada com sucesso!')
     } else {
       const { data: existingAreas } = await supabase
         .from('areas')
@@ -55,13 +64,21 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
       const nextOrder =
         existingAreas && existingAreas.length > 0 ? existingAreas[0].order_index + 1 : 0
 
-      await supabase.from('areas').insert({
+      const { error } = await supabase.from('areas').insert({
         user_id: user.id,
         name,
         color,
         icon,
         order_index: nextOrder,
       })
+
+      if (error) {
+        toast.error('Erro ao criar área')
+        setLoading(false)
+        return
+      }
+
+      toast.success('Área criada com sucesso!')
     }
 
     setLoading(false)
@@ -71,8 +88,11 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Nome da área</label>
+        <label htmlFor="area-name" className="text-sm font-medium">
+          Nome da área
+        </label>
         <Input
+          id="area-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Ex: Saúde, Estudos, Casa..."
@@ -81,8 +101,8 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Cor</label>
-        <div className="grid grid-cols-8 gap-2">
+        <span className="text-sm font-medium">Cor</span>
+        <div className="grid grid-cols-8 gap-2" role="radiogroup" aria-label="Cor">
           {COLORS.map((c) => (
             <button
               key={c}
@@ -98,8 +118,8 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Ícone</label>
-        <div className="grid grid-cols-10 gap-2">
+        <span className="text-sm font-medium">Ícone</span>
+        <div className="grid grid-cols-10 gap-2" role="radiogroup" aria-label="Ícone">
           {ICONS.map((i) => (
             <button
               key={i}
@@ -116,7 +136,7 @@ export function AreaForm({ area, onSuccess, onCancel }: AreaFormProps) {
       </div>
 
       <div className="flex gap-3 justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>
