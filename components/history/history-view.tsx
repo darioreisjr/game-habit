@@ -18,42 +18,44 @@ export function HistoryView({ habit, checkins }: HistoryViewProps) {
   const router = useRouter()
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="p-2 rounded-full hover:bg-background-light transition-colors"
-          aria-label="Voltar"
-        >
-          <ArrowLeft size={24} />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold">{habit.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            {habit.area && (
-              <Badge variant="secondary">
-                {habit.area.icon} {habit.area.name}
+    <div className="md:ml-64">
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="p-2 rounded-full hover:bg-background-light transition-colors"
+            aria-label="Voltar"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl font-display font-bold">{habit.name}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              {habit.area && (
+                <Badge variant="secondary">
+                  {habit.area.icon} {habit.area.name}
+                </Badge>
+              )}
+              <Badge variant={DIFFICULTY_CONFIG[habit.difficulty as HabitDifficulty].variant}>
+                +{DIFFICULTY_CONFIG[habit.difficulty as HabitDifficulty].xp} XP
               </Badge>
-            )}
-            <Badge variant={DIFFICULTY_CONFIG[habit.difficulty as HabitDifficulty].variant}>
-              +{DIFFICULTY_CONFIG[habit.difficulty as HabitDifficulty].xp} XP
-            </Badge>
+            </div>
           </div>
         </div>
+
+        <HistoryStats checkins={checkins} />
+
+        <Card className="p-4 md:p-6">
+          <h2 className="text-lg font-semibold mb-4">Calendário de Conclusões</h2>
+          <HistoryCalendar checkins={checkins} />
+        </Card>
+
+        <Card className="p-4 md:p-6">
+          <h2 className="text-lg font-semibold mb-4">Histórico Recente</h2>
+          <HistoryRecentList checkins={checkins} />
+        </Card>
       </div>
-
-      <HistoryStats checkins={checkins} />
-
-      <Card className="p-4 md:p-6">
-        <h2 className="text-lg font-semibold mb-4">Calendário de Conclusões</h2>
-        <HistoryCalendar checkins={checkins} />
-      </Card>
-
-      <Card className="p-4 md:p-6">
-        <h2 className="text-lg font-semibold mb-4">Histórico Recente</h2>
-        <HistoryRecentList checkins={checkins} />
-      </Card>
     </div>
   )
 }
