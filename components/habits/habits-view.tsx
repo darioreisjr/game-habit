@@ -165,60 +165,64 @@ export function HabitsView({ initialHabits, initialAreas }: HabitsViewProps) {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl md:text-4xl font-display font-bold">Hábitos</h1>
+      <div className="md:ml-64">
+        <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl md:text-4xl font-display font-bold">Hábitos</h1>
+          </div>
+          <HabitsPageSkeleton />
         </div>
-        <HabitsPageSkeleton />
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl md:text-4xl font-display font-bold">Hábitos</h1>
-        <Button onClick={handleOpenForm} className="gap-2">
-          <Plus size={20} />
-          Novo hábito
-        </Button>
+    <div className="md:ml-64">
+      <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl md:text-4xl font-display font-bold">Hábitos</h1>
+          <Button onClick={handleOpenForm} className="gap-2">
+            <Plus size={20} />
+            Novo hábito
+          </Button>
+        </div>
+
+        <HabitFilterBar
+          areas={areas}
+          selectedArea={selectedArea}
+          onAreaChange={setSelectedArea}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          showArchived={showArchived}
+          onArchivedChange={setShowArchived}
+          activeFiltersCount={activeFiltersCount}
+          onClearFilters={clearFilters}
+        />
+
+        <HabitFormModal
+          isOpen={showForm}
+          habit={editingHabit}
+          onClose={handleCloseForm}
+          onSuccess={handleFormSuccess}
+        />
+
+        <HabitList
+          habits={displayedHabits}
+          mutatingId={mutatingId}
+          isArchived={showArchived}
+          groupByPeriod={false}
+          deleteConfirm={deleteConfirm}
+          onEdit={handleEditHabit}
+          onArchive={handleArchive}
+          onRestore={handleRestore}
+          onDeleteRequest={handleDeleteRequest}
+          onDeleteConfirm={handleDeleteConfirm}
+          onDeleteCancel={handleDeleteCancel}
+          onCreateHabit={handleOpenForm}
+          onClearFilters={clearFilters}
+          emptyStateVariant={emptyStateVariant}
+        />
       </div>
-
-      <HabitFilterBar
-        areas={areas}
-        selectedArea={selectedArea}
-        onAreaChange={setSelectedArea}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        showArchived={showArchived}
-        onArchivedChange={setShowArchived}
-        activeFiltersCount={activeFiltersCount}
-        onClearFilters={clearFilters}
-      />
-
-      <HabitFormModal
-        isOpen={showForm}
-        habit={editingHabit}
-        onClose={handleCloseForm}
-        onSuccess={handleFormSuccess}
-      />
-
-      <HabitList
-        habits={displayedHabits}
-        mutatingId={mutatingId}
-        isArchived={showArchived}
-        groupByPeriod={false}
-        deleteConfirm={deleteConfirm}
-        onEdit={handleEditHabit}
-        onArchive={handleArchive}
-        onRestore={handleRestore}
-        onDeleteRequest={handleDeleteRequest}
-        onDeleteConfirm={handleDeleteConfirm}
-        onDeleteCancel={handleDeleteCancel}
-        onCreateHabit={handleOpenForm}
-        onClearFilters={clearFilters}
-        emptyStateVariant={emptyStateVariant}
-      />
     </div>
   )
 }
