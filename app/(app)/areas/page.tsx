@@ -1,185 +1,30 @@
-'use client'
+import { AreasView } from '@/components/areas/areas-view'
+import { createClient } from '@/lib/supabase/server'
 
-import { Edit2, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { AreaForm } from '@/components/areas/area-form'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase/client'
-import type { Area } from '@/types/database.types'
+export default async function AreasPage() {
+  const supabase = await createClient()
 
-export default function AreasPage() {
-  const [areas, setAreas] = useState<Area[]>([])
-  const [habitCounts, setHabitCounts] = useState<Record<string, number>>({})
-  const [editingArea, setEditingArea] = useState<Area | null>(null)
-  const [showForm, setShowForm] = useState(false)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const loadData = async () => {
-    const supabase = createClient()
+  if (!user) return null
 
-    // Otimização: Promise.all para queries paralelas + contagem agregada
-    // Antes: N+1 queries (1 para áreas + N para contar hábitos de cada área)
-    // Agora: 2 queries apenas
-    const [areasResult, habitsResult] = await Promise.all([
-      supabase.from('areas').select('*').order('order_index'),
-      supabase.from('habits').select('area_id').eq('is_archived', false),
-    ])
+  // Fetch all data in parallel for better performance
+  const [{ data: areas }, { data: habits }] = await Promise.all([
+    supabase.from('areas').select('*').eq('user_id', user.id).order('order_index'),
+    supabase.from('habits').select('area_id').eq('user_id', user.id).eq('is_archived', false),
+  ])
 
-    if (areasResult.data) {
-      setAreas(areasResult.data)
-
-      // Contar hábitos por área em memória (O(n) ao invés de N queries)
-      const counts: Record<string, number> = {}
-      if (habitsResult.data) {
-        for (const habit of habitsResult.data) {
-          if (habit.area_id) {
-            counts[habit.area_id] = (counts[habit.area_id] || 0) + 1
-          }
-        }
+  // Calculate habit counts per area
+  const habitCounts: Record<string, number> = {}
+  if (habits) {
+    for (const habit of habits) {
+      if (habit.area_id) {
+        habitCounts[habit.area_id] = (habitCounts[habit.area_id] || 0) + 1
       }
-      setHabitCounts(counts)
     }
   }
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const handleDelete = async (areaId: string) => {
-    const habitCount = habitCounts[areaId] || 0
-
-    if (habitCount > 0) {
-      toast.warning(
-        `Esta área possui ${habitCount} hábito(s) vinculado(s). Remova ou mova os hábitos antes de excluir.`
-      )
-      return
-    }
-
-    if (!confirm('Tem certeza que deseja excluir esta área? Esta ação não pode ser desfeita.')) {
-      return
-    }
-
-    const supabase = createClient()
-    await supabase.from('areas').delete().eq('id', areaId)
-
-    loadData()
-  }
-
-  const handleFormSuccess = () => {
-    setShowForm(false)
-    setEditingArea(null)
-    loadData()
-  }
-
-  return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 md:ml-64">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold">Áreas</h1>
-          <p className="text-text-secondary mt-2">Organize seus hábitos em áreas da sua vida</p>
-        </div>
-        <Button onClick={() => setShowForm(true)} className="gap-2">
-          <Plus size={20} />
-          Nova área
-        </Button>
-      </div>
-
-      {/* Area Form */}
-      {showForm && (
-        <Card className="p-6">
-          <h2 className="text-2xl font-display font-semibold mb-6">
-            {editingArea ? 'Editar Área' : 'Nova Área'}
-          </h2>
-          <AreaForm
-            area={editingArea || undefined}
-            onSuccess={handleFormSuccess}
-            onCancel={() => {
-              setShowForm(false)
-              setEditingArea(null)
-            }}
-          />
-        </Card>
-      )}
-
-      {/* Areas List */}
-      <div className="space-y-3">
-        {areas.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-text-secondary mb-4">
-              Você ainda não tem áreas. Crie sua primeira área para organizar seus hábitos!
-            </p>
-            <Button onClick={() => setShowForm(true)} className="gap-2">
-              <Plus size={20} />
-              Criar primeira área
-            </Button>
-          </Card>
-        ) : (
-          areas.map((area) => (
-            <Card key={area.id} className="p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-4">
-                {/* Icon and Color */}
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ backgroundColor: `${area.color}20` }}
-                >
-                  {area.icon}
-                </div>
-
-                {/* Area Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg mb-1">{area.name}</h3>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="secondary"
-                      style={{
-                        backgroundColor: `${area.color}20`,
-                        color: area.color,
-                      }}
-                    >
-                      {habitCounts[area.id] || 0} hábito(s)
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingArea(area)
-                      setShowForm(true)
-                    }}
-                  >
-                    <Edit2 size={18} />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleDelete(area.id)}
-                    className="text-mario-red hover:text-mario-red"
-                  >
-                    <Trash2 size={18} />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Info Card */}
-      {areas.length > 0 && (
-        <Card className="p-4 bg-background-light">
-          <p className="text-sm text-text-secondary">
-            💡 <strong>Dica:</strong> As áreas ajudam você a organizar seus hábitos por temas como
-            Saúde, Estudos, Trabalho, etc. Você não pode excluir uma área que possui hábitos
-            vinculados.
-          </p>
-        </Card>
-      )}
-    </div>
-  )
+  return <AreasView initialAreas={areas || []} initialHabitCounts={habitCounts} />
 }
