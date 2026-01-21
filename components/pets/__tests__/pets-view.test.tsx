@@ -17,7 +17,6 @@ const mockUserPets = [
     pet_type: {
       id: 'type-1',
       name: 'Dragao',
-      emoji: '🐉',
       rarity: 'rare',
       price: 100,
       description: 'Um dragao amigavel',
@@ -37,7 +36,6 @@ const mockUserPets = [
     pet_type: {
       id: 'type-2',
       name: 'Gato',
-      emoji: '🐱',
       rarity: 'common',
       price: 0,
       description: 'Um gato fofo',
@@ -49,7 +47,6 @@ const mockPetTypes = [
   {
     id: 'type-1',
     name: 'Dragao',
-    emoji: '🐉',
     rarity: 'rare',
     price: 100,
     description: 'Um dragao amigavel',
@@ -57,7 +54,6 @@ const mockPetTypes = [
   {
     id: 'type-2',
     name: 'Gato',
-    emoji: '🐱',
     rarity: 'common',
     price: 0,
     description: 'Um gato fofo',
@@ -65,7 +61,6 @@ const mockPetTypes = [
   {
     id: 'type-3',
     name: 'Fenix',
-    emoji: '🔥',
     rarity: 'legendary',
     price: 500,
     description: 'Uma fenix lendaria',

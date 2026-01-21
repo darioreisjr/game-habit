@@ -211,7 +211,7 @@ export function PetsView() {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="text-center mb-6">
                   <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-5xl mb-4 shadow-lg">
-                    {(activePet as UserPet & { pet_type?: PetType }).pet_type?.emoji || '🦎'}
+                    🦎
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-1">
                     {activePet.nickname ||
@@ -338,7 +338,7 @@ export function PetsView() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-2xl">
-                          {(pet as UserPet & { pet_type?: PetType }).pet_type?.emoji || '🦎'}
+                          🦎
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900">
@@ -380,7 +380,7 @@ export function PetsView() {
                   >
                     <div className="text-center mb-4">
                       <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-4xl mb-3 shadow-lg">
-                        {petType.emoji || '🦎'}
+                        🦎
                       </div>
                       <h3 className="text-lg font-bold text-gray-900 mb-1">{petType.name}</h3>
                       <p className="text-sm text-gray-600 mb-2">{petType.description}</p>
