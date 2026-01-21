@@ -1,5 +1,6 @@
 'use client'
 
+import { AnimatePresence, motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { HabitFormModal } from '@/components/habits/habit-form-modal'
@@ -44,6 +45,18 @@ export function HabitList({
 }: HabitListProps) {
   const [showNewHabitModal, setShowNewHabitModal] = useState(false)
 
+  const sortHabitsByCompletion = useCallback(
+    (habitsToSort: Habit[]) => {
+      return [...habitsToSort].sort((a, b) => {
+        const aCompleted = completedHabitIds.has(a.id)
+        const bCompleted = completedHabitIds.has(b.id)
+        if (aCompleted === bCompleted) return 0
+        return aCompleted ? 1 : -1
+      })
+    },
+    [completedHabitIds]
+  )
+
   const groupedHabits = useMemo(() => {
     const groups: GroupedHabits = {
       morning: [],
@@ -56,8 +69,12 @@ export function HabitList({
       groups[period].push(habit)
     })
 
-    return groups
-  }, [habits])
+    return {
+      morning: sortHabitsByCompletion(groups.morning),
+      afternoon: sortHabitsByCompletion(groups.afternoon),
+      evening: sortHabitsByCompletion(groups.evening),
+    }
+  }, [habits, sortHabitsByCompletion])
 
   const hasMultiplePeriods = useMemo(() => {
     const nonEmptyPeriods = Object.values(groupedHabits).filter((g) => g.length > 0)
@@ -71,17 +88,29 @@ export function HabitList({
     [completedHabitIds]
   )
 
+  const sortedHabits = useMemo(() => {
+    return sortHabitsByCompletion(habits)
+  }, [habits, sortHabitsByCompletion])
+
   const renderHabitCard = useCallback(
     (habit: Habit) => (
-      <HabitCard
+      <motion.div
         key={habit.id}
-        habit={habit}
-        isCompleted={completedHabitIds.has(habit.id)}
-        isLoading={completingHabit === habit.id}
-        recentCheckins={recentCheckins}
-        onComplete={onCompleteHabit}
-        onArchive={onArchiveHabit}
-      />
+        layout
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      >
+        <HabitCard
+          habit={habit}
+          isCompleted={completedHabitIds.has(habit.id)}
+          isLoading={completingHabit === habit.id}
+          recentCheckins={recentCheckins}
+          onComplete={onCompleteHabit}
+          onArchive={onArchiveHabit}
+        />
+      </motion.div>
     ),
     [completedHabitIds, completingHabit, recentCheckins, onCompleteHabit, onArchiveHabit]
   )
@@ -116,13 +145,17 @@ export function HabitList({
                 count={periodHabits.length}
                 completedCount={getCompletedCountForPeriod(periodHabits)}
               >
-                {periodHabits.map(renderHabitCard)}
+                <AnimatePresence mode="popLayout">
+                  {periodHabits.map(renderHabitCard)}
+                </AnimatePresence>
               </HabitPeriodGroup>
             )
           })}
         </div>
       ) : (
-        <div className="space-y-3">{habits.map(renderHabitCard)}</div>
+        <AnimatePresence mode="popLayout">
+          <div className="space-y-3">{sortedHabits.map(renderHabitCard)}</div>
+        </AnimatePresence>
       )}
 
       <HabitFormModal
